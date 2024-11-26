@@ -1,0 +1,44 @@
+Camera:
+  name: ZED2
+  setup: monocular
+  model: perspective
+  color_order: RGB
+  cols: 1280
+  rows: 720
+  fps: 15
+  fx: 523.0936889648438
+  fy: 523.0936889648438
+  cx: 645.2420043945312
+  cy: 369.2361755371094
+  k1: 0.0
+  k2: 0.0
+  p1: 0.0
+  p2: 0.0
+  k3: 0.0
+  h_fov: 101.48240661621094
+  stereo_baseline: 119.90037536621094
+
+StereoRectifier:
+  K_left: [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0]
+  K_right: [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0]
+  R_left: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  R_right: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  T_left: [0.0, 0.0, 0.0]
+  T_right: [119.9004, 0.0, 0.0]
+
+  # Distortion coefficients
+  D_left: [0.0, 0.0, 0.0, 0.0, 0.0]
+  D_right: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+SocketPublisher:
+  address: 127.0.0.1 # Ensure this matches the server IP
+  port: 7000         # Ensure this matches the server port
+
+Mapping:
+  voxel_size: 0.025
+  res: 8
+  n_labels: 150
+  depth_scale: 1000.0
+  depth_max: 5.0
+  miu: 0.001
+  truncation_vsize_multiple: 8
