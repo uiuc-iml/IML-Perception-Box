@@ -5,6 +5,12 @@ project(stella_vslam_examples LANGUAGES CXX C)
 
 find_package(stella_vslam REQUIRED)
 
+# RealSense
+find_package(realsense2 REQUIRED)
+
+# ZED SDK
+find_package(ZED 3 REQUIRED)
+
 # filesystem
 set(filesystem_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/filesystem/include)
 
@@ -69,6 +75,42 @@ add_executable(run_loop_closure src/run_loop_closure.cc)
 list(APPEND EXECUTABLE_TARGETS run_loop_closure)
 
 foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
+
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+    pkg_check_modules(GSTREAMER_BASE REQUIRED gstreamer-base-1.0)
+    pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
+    pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
+    pkg_check_modules(GLIB REQUIRED glib-2.0)
+
+    include_directories(
+        ${GSTREAMER_INCLUDE_DIRS}
+        ${GSTREAMER_BASE_INCLUDE_DIRS}
+        ${GSTREAMER_APP_INCLUDE_DIRS}
+        ${GOBJECT_INCLUDE_DIRS}
+        ${GLIB_INCLUDE_DIRS}
+        /usr/lib/aarch64-linux-gnu/glib-2.0/include
+        ${realsense2_INCLUDE_DIR} # Add RealSense include directories
+        ${ZED_INCLUDE_DIRS}       # Add ZED SDK include directories
+    )
+
+    # Link stella_vslam with keyword signature
+    target_link_libraries(${EXECUTABLE_TARGET}
+                        PRIVATE
+                        stella_vslam::stella_vslam
+                        opencv_imgcodecs
+                        opencv_videoio
+                        ${GSTREAMER_LIBRARIES}
+                        ${GSTREAMER_BASE_LIBRARIES}
+                        ${GSTREAMER_APP_LIBRARIES}
+                        ${GOBJECT_LIBRARIES}
+                        ${GLIB_LIBRARIES}
+                        gobject-2.0
+                        glib-2.0
+                        ${realsense2_LIBRARY} # Link RealSense library
+                        ${ZED_LIBRARIES}      # Link ZED SDK libraries
+                        )
+
     # Set output directory for executables
     set_target_properties(${EXECUTABLE_TARGET} PROPERTIES
                           RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
@@ -109,14 +151,7 @@ foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
         target_link_libraries(${EXECUTABLE_TARGET} PRIVATE ${GPERFTOOLS_LIBRARIES})
     endif()
 
-    # Link stella_vslam
-    target_link_libraries(${EXECUTABLE_TARGET}
-                          PRIVATE
-                          stella_vslam::stella_vslam
-                          opencv_imgcodecs
-                          opencv_videoio)
-
-    # include 3rd party library headers
+    # Include 3rd party library headers
     target_include_directories(${EXECUTABLE_TARGET}
                                PRIVATE
                                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/popl/include>
