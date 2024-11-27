@@ -620,6 +620,8 @@ int mono_tracking_zed_pose(const std::shared_ptr<stella_vslam::system>& slam,
         slam->shutdown();
         return EXIT_FAILURE;
     }
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
 
     const char* ip_address = cfg->yaml_node_["SocketPublisher"]["address"].as<std::string>().c_str();
     int port_id = cfg->yaml_node_["SocketPublisher"]["port"].as<int>();
@@ -964,6 +966,502 @@ int mono_tracking_zed_pose(const std::shared_ptr<stella_vslam::system>& slam,
 
 
 
+
+
+
+
+
+
+
+
+// Include necessary headers
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <numeric>
+#include <algorithm>
+#include <chrono>
+#include <opencv2/opencv.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <sl/Camera.hpp> // ZED SDK
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+// Include SLAM system headers
+#include <stella_vslam/system.h>
+#include <stella_vslam/config.h>
+#include <stella_vslam/util/yaml.h>
+#include <stella_vslam/publish/frame_publisher.h>
+#include <stella_vslam/publish/map_publisher.h>
+
+// Include viewer headers
+#ifdef HAVE_PANGOLIN_VIEWER
+#include <pangolin_viewer/viewer.h>
+#endif
+#ifdef HAVE_IRIDESCENCE_VIEWER
+#include <iridescence_viewer/viewer.h>
+#endif
+#ifdef HAVE_SOCKET_PUBLISHER
+#include <socket_publisher/publisher.h>
+#endif
+
+// Define the function
+int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& slam,
+                           const std::shared_ptr<stella_vslam::config>& cfg,
+                           const unsigned int cam_num,
+                           const std::string& mask_img_path,
+                           const float scale,
+                           const std::string& map_db_path,
+                           const std::string& viewer_string) {
+    // Load the mask image if provided
+    const cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE);
+
+    // Socket initialization
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Socket creation failed");
+        slam->shutdown();
+        return EXIT_FAILURE;
+    }
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+
+    // Retrieve IP address and port from configuration
+    const std::string ip_address = cfg->yaml_node_["SocketPublisher"]["address"].as<std::string>();
+    int port_id = cfg->yaml_node_["SocketPublisher"]["port"].as<int>();
+    server_addr.sin_port = htons(port_id);
+    server_addr.sin_addr.s_addr = inet_addr(ip_address.c_str());
+    if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection failed");
+        slam->shutdown();
+        close(sock);
+        return EXIT_FAILURE;
+    }
+
+    // Viewer initialization based on the viewer_string parameter
+#ifdef HAVE_PANGOLIN_VIEWER
+    std::shared_ptr<pangolin_viewer::viewer> pangolin_viewer;
+    if (viewer_string == "pangolin_viewer") {
+        pangolin_viewer = std::make_shared<pangolin_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "PangolinViewer"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+    }
+#endif
+#ifdef HAVE_IRIDESCENCE_VIEWER
+    std::shared_ptr<iridescence_viewer::viewer> iridescence_viewer;
+    std::mutex mtx_pause;
+    bool is_paused = false;
+    std::mutex mtx_terminate;
+    bool terminate_is_requested = false;
+    std::mutex mtx_step;
+    unsigned int step_count = 0;
+    if (viewer_string == "iridescence_viewer") {
+        iridescence_viewer = std::make_shared<iridescence_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "IridescenceViewer"),
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+        // Add controls to the viewer
+        iridescence_viewer->add_checkbox("Pause", [&is_paused, &mtx_pause](bool check) {
+            std::lock_guard<std::mutex> lock(mtx_pause);
+            is_paused = check;
+        });
+        iridescence_viewer->add_button("Step", [&step_count, &mtx_step] {
+            std::lock_guard<std::mutex> lock(mtx_step);
+            step_count++;
+        });
+        iridescence_viewer->add_button("Reset", [&slam] {
+            slam->request_reset();
+        });
+        iridescence_viewer->add_button("Save and exit", [&is_paused, &mtx_pause, &terminate_is_requested, &mtx_terminate, &iridescence_viewer] {
+            {
+                std::lock_guard<std::mutex> lock1(mtx_pause);
+                is_paused = false;
+            }
+            {
+                std::lock_guard<std::mutex> lock2(mtx_terminate);
+                terminate_is_requested = true;
+            }
+            iridescence_viewer->request_terminate();
+        });
+        iridescence_viewer->add_close_callback([&is_paused, &mtx_pause, &terminate_is_requested, &mtx_terminate] {
+            {
+                std::lock_guard<std::mutex> lock1(mtx_pause);
+                is_paused = false;
+            }
+            {
+                std::lock_guard<std::mutex> lock2(mtx_terminate);
+                terminate_is_requested = true;
+            }
+        });
+    }
+#endif
+#ifdef HAVE_SOCKET_PUBLISHER
+    std::shared_ptr<socket_publisher::publisher> socket_publisher;
+    if (viewer_string == "socket_publisher") {
+        socket_publisher = std::make_shared<socket_publisher::publisher>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "SocketPublisher"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+    }
+#endif
+
+    // Initialize ZED camera
+    sl::Camera zed;
+
+    // Set ZED camera initialization parameters
+    sl::InitParameters init_params;
+    init_params.camera_resolution = sl::RESOLUTION::HD720; // You can set this from cfg if needed
+    init_params.depth_mode = sl::DEPTH_MODE::PERFORMANCE;
+    init_params.coordinate_units = sl::UNIT::MILLIMETER;   // Depth in millimeters
+
+    // Open the ZED camera
+    sl::ERROR_CODE err = zed.open(init_params);
+    if (err != sl::ERROR_CODE::SUCCESS) {
+        std::cerr << "Error opening ZED camera: " << sl::toString(err) << std::endl;
+        slam->shutdown();
+        close(sock);
+        return EXIT_FAILURE;
+    }
+
+    // Define a shared data structure to hold frames and pose data
+    struct FramePoseData {
+        cv::Mat color_frame;
+        cv::Mat depth_frame;
+        Eigen::Matrix4d pose;
+        bool has_pose = false;
+    };
+    std::mutex data_mutex;
+    FramePoseData shared_data;
+
+    // Variables for controlling the loop and tracking times
+    bool is_not_end = true;
+    unsigned int num_frame = 0;
+    std::vector<double> track_times;
+
+    // Thread for SLAM processing
+    std::thread slam_thread([&]() {
+        while (is_not_end) {
+            // Pause functionality for the viewer (if using iridescence_viewer)
+#ifdef HAVE_IRIDESCENCE_VIEWER
+            while (true) {
+                {
+                    std::lock_guard<std::mutex> lock(mtx_pause);
+                    if (!is_paused) {
+                        break;
+                    }
+                }
+                {
+                    std::lock_guard<std::mutex> lock(mtx_step);
+                    if (step_count > 0) {
+                        step_count--;
+                        break;
+                    }
+                }
+                std::this_thread::sleep_for(std::chrono::microseconds(5000));
+            }
+#endif
+
+            // Check for termination request
+#ifdef HAVE_IRIDESCENCE_VIEWER
+            {
+                std::lock_guard<std::mutex> lock(mtx_terminate);
+                if (terminate_is_requested) {
+                    is_not_end = false;
+                    break;
+                }
+            }
+#else
+            if (slam->terminate_is_requested()) {
+                is_not_end = false;
+                break;
+            }
+#endif
+
+            // Capture a new frame from the ZED camera
+            if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
+                // Retrieve the RGB image and depth map
+                sl::Mat zed_image;
+                sl::Mat zed_depth;
+                zed.retrieveImage(zed_image, sl::VIEW::LEFT, sl::MEM::CPU);
+                zed.retrieveMeasure(zed_depth, sl::MEASURE::DEPTH, sl::MEM::CPU);
+
+                // Convert ZED image to OpenCV format (color frame)
+                cv::Mat rgb_image = cv::Mat(zed_image.getHeight(), zed_image.getWidth(), CV_8UC4, zed_image.getPtr<sl::uchar1>(sl::MEM::CPU));
+                cv::Mat color_frame;
+                cv::cvtColor(rgb_image, color_frame, cv::COLOR_BGRA2BGR);
+
+                // Convert ZED depth map to OpenCV format (depth frame)
+                cv::Mat depth_frame = cv::Mat(zed_depth.getHeight(), zed_depth.getWidth(), CV_32FC1, zed_depth.getPtr<sl::float1>(sl::MEM::CPU));
+
+                // Resize frames if scaling is required
+                if (scale != 1.0) {
+                    cv::resize(color_frame, color_frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
+                    cv::resize(depth_frame, depth_frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
+                }
+
+                // Record the start time of SLAM processing
+                const auto tp_1 = std::chrono::steady_clock::now();
+
+                // Input the current frame into the SLAM system
+                auto now = std::chrono::system_clock::now();
+                double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(now.time_since_epoch()).count();
+                slam->feed_monocular_frame(color_frame, timestamp, mask);
+
+                // Get the current tracking state
+                auto tracking_state = slam->get_frame_publisher()->get_tracking_state();
+
+                Eigen::Matrix4d cam_pose;
+                bool has_pose = false;
+
+                if (tracking_state == "Tracking") {
+                    // Get the current camera pose from the map publisher
+                    cam_pose = slam->get_map_publisher()->get_current_cam_pose();
+                    has_pose = true;
+
+                    // Print the pose matrix
+                    std::cout << "Frame " << num_frame << " Pose:\n" << cam_pose << std::endl;
+
+                    // Extract rotation and translation
+                    Eigen::Matrix3d rotation = cam_pose.block<3, 3>(0, 0);
+                    Eigen::Vector3d translation = cam_pose.block<3, 1>(0, 3);
+
+                    // Convert rotation matrix to Euler angles (yaw, pitch, roll)
+                    Eigen::Vector3d euler_angles = rotation.eulerAngles(2, 1, 0);
+                    Eigen::Vector3d euler_angles_deg = euler_angles * 180.0 / M_PI;
+
+                    // Print translation and rotation
+                    std::cout << "Translation (x, y, z): " << translation.transpose() << std::endl;
+                    std::cout << "Rotation (yaw, pitch, roll) in degrees: " << euler_angles_deg.transpose() << std::endl;
+                } else {
+                    std::cout << "Frame " << num_frame << " tracking state: " << tracking_state << std::endl;
+                }
+
+                // Record the end time of SLAM processing and calculate tracking time
+                const auto tp_2 = std::chrono::steady_clock::now();
+                const auto track_time = std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+                track_times.push_back(track_time);
+
+                // Update shared data with the latest frames and pose
+                {
+                    std::lock_guard<std::mutex> lock(data_mutex);
+                    color_frame.copyTo(shared_data.color_frame);
+                    depth_frame.copyTo(shared_data.depth_frame);
+                    if (has_pose) {
+                        shared_data.pose = cam_pose;
+                        shared_data.has_pose = true;
+                    } else {
+                        shared_data.has_pose = false;
+                    }
+                }
+
+                ++num_frame;
+            } else {
+                // If frame grab fails, wait a bit before retrying
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        }
+
+        // Wait until loop closure and bundle adjustment are finished
+        while (slam->loop_BA_is_running()) {
+            std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        }
+
+        // Shutdown the SLAM system
+        slam->shutdown();
+    });
+
+    // Thread for sending image and pose data over the socket
+    std::thread data_sender_thread([&]() {
+        while (is_not_end) {
+            cv::Mat color_local, depth_local;
+            Eigen::Matrix4d local_pose;
+            bool local_has_pose = false;
+
+            // Read shared data
+            {
+                std::lock_guard<std::mutex> lock(data_mutex);
+                if (!shared_data.color_frame.empty()) {
+                    shared_data.color_frame.copyTo(color_local);
+                    if (!shared_data.depth_frame.empty()) {
+                        shared_data.depth_frame.copyTo(depth_local);
+                    }
+                    local_has_pose = shared_data.has_pose;
+                    if (local_has_pose) {
+                        local_pose = shared_data.pose;
+                    }
+                }
+            }
+
+            if (!color_local.empty()) {
+                // Serialize color image (JPEG)
+                std::vector<uchar> buf;
+                cv::imencode(".jpg", color_local, buf);
+                int img_size = buf.size();
+                int32_t net_img_size = htonl(img_size);
+
+                // Send color image size
+                int sent = send(sock, &net_img_size, sizeof(net_img_size), 0);
+                if (sent != sizeof(net_img_size)) {
+                    perror("Failed to send color image size");
+                    break;
+                }
+
+                // Send color image data
+                int total_sent = 0;
+                while (total_sent < img_size) {
+                    sent = send(sock, buf.data() + total_sent, img_size - total_sent, 0);
+                    if (sent <= 0) {
+                        perror("Failed to send color image data");
+                        break;
+                    }
+                    total_sent += sent;
+                }
+                if (total_sent != img_size) {
+                    perror("Failed to send complete color image data");
+                    break;
+                }
+
+                // Serialize depth image (PNG)
+                if (!depth_local.empty()) {
+                    // Convert depth image to 16-bit unsigned integer
+                    depth_local.convertTo(depth_local, CV_16U);
+
+                    // Encode depth image as PNG
+                    std::vector<uchar> depth_buf;
+                    cv::imencode(".png", depth_local, depth_buf);
+                    int depth_img_size = depth_buf.size();
+                    int32_t net_depth_img_size = htonl(depth_img_size);
+
+                    // Send depth image size
+                    sent = send(sock, &net_depth_img_size, sizeof(net_depth_img_size), 0);
+                    if (sent != sizeof(net_depth_img_size)) {
+                        perror("Failed to send depth image size");
+                        break;
+                    }
+
+                    // Send depth image data
+                    total_sent = 0;
+                    while (total_sent < depth_img_size) {
+                        sent = send(sock, depth_buf.data() + total_sent, depth_img_size - total_sent, 0);
+                        if (sent <= 0) {
+                            perror("Failed to send depth image data");
+                            break;
+                        }
+                        total_sent += sent;
+                    }
+                    if (total_sent != depth_img_size) {
+                        perror("Failed to send complete depth image data");
+                        break;
+                    }
+                } else {
+                    // Send zero size if depth frame is empty
+                    int32_t net_depth_img_size = htonl(0);
+                    send(sock, &net_depth_img_size, sizeof(net_depth_img_size), 0);
+                }
+
+                // Serialize pose data
+                double pose_array[16];
+                if (local_has_pose) {
+                    memcpy(pose_array, local_pose.data(), sizeof(pose_array));
+                } else {
+                    // Send identity matrix if no pose is available
+                    std::fill(std::begin(pose_array), std::end(pose_array), 0.0);
+                    pose_array[0] = pose_array[5] = pose_array[10] = pose_array[15] = 1.0;
+                }
+
+                // Send pose data
+                total_sent = 0;
+                int pose_data_size = sizeof(pose_array);
+                while (total_sent < pose_data_size) {
+                    sent = send(sock, ((char*)pose_array) + total_sent, pose_data_size - total_sent, 0);
+                    if (sent <= 0) {
+                        perror("Failed to send pose data");
+                        break;
+                    }
+                    total_sent += sent;
+                }
+                if (total_sent != pose_data_size) {
+                    perror("Failed to send complete pose data");
+                    break;
+                }
+            }
+
+            // Sleep for a while to control the frame rate
+            std::this_thread::sleep_for(std::chrono::milliseconds(33)); // Approximately 30 FPS
+        }
+    });
+
+    // Run the viewer in the main thread
+    if (viewer_string == "pangolin_viewer") {
+#ifdef HAVE_PANGOLIN_VIEWER
+        pangolin_viewer->run();
+#endif
+    }
+    if (viewer_string == "iridescence_viewer") {
+#ifdef HAVE_IRIDESCENCE_VIEWER
+        iridescence_viewer->run();
+#endif
+    }
+    if (viewer_string == "socket_publisher") {
+#ifdef HAVE_SOCKET_PUBLISHER
+        socket_publisher->run();
+#endif
+    }
+
+    // Wait for threads to finish
+    data_sender_thread.join();
+    slam_thread.join();
+
+    // Close the socket
+    close(sock);
+
+    // Close the ZED camera
+    zed.close();
+
+    // Output tracking times
+    std::sort(track_times.begin(), track_times.end());
+    const auto total_track_time = std::accumulate(track_times.begin(), track_times.end(), 0.0);
+    std::cout << "Median tracking time: " << track_times.at(track_times.size() / 2) << " [s]" << std::endl;
+    std::cout << "Mean tracking time: " << total_track_time / track_times.size() << " [s]" << std::endl;
+
+    // Save the map database if a path is provided
+    if (!map_db_path.empty()) {
+        if (!slam->save_map_database(map_db_path)) {
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int mono_tracking_realsense(const std::shared_ptr<stella_vslam::system>& slam,
                       const std::shared_ptr<stella_vslam::config>& cfg,
                       const unsigned int cam_num,
@@ -1236,7 +1734,6 @@ int mono_tracking_realsense(const std::shared_ptr<stella_vslam::system>& slam,
 
     return EXIT_SUCCESS;
 }
-
 
 
 
@@ -1609,6 +2106,313 @@ int mono_tracking_realsense_pose(const std::shared_ptr<stella_vslam::system>& sl
 
 
 
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <numeric>
+#include <algorithm>
+#include <chrono>
+#include <opencv2/opencv.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <librealsense2/rs.hpp> // RealSense API
+#include <stella_vslam/system.h>
+#include <stella_vslam/config.h>
+#include <stella_vslam/util/yaml.h>
+#include <stella_vslam/publish/frame_publisher.h>
+#include <stella_vslam/publish/map_publisher.h>
+#include <pangolin/pangolin.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::system>& slam,
+                                 const std::shared_ptr<stella_vslam::config>& cfg,
+                                 const unsigned int cam_num,
+                                 const std::string& mask_img_path,
+                                 const float scale,
+                                 const std::string& map_db_path,
+                                 const std::string& viewer_string) {
+    // Load mask image if provided
+    const cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE);
+
+    // Configure RealSense pipeline for depth and color streams
+    rs2::pipeline rs_pipe;
+    rs2::config rs_cfg;
+    rs_cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
+    rs_cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8, 30);
+    try {
+        rs_pipe.start(rs_cfg);
+    } catch (const rs2::error& e) {
+        std::cerr << "RealSense error: " << e.what() << std::endl;
+        slam->shutdown();
+        return EXIT_FAILURE;
+    }
+
+    // Initialize a TCP socket for data transmission
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Socket creation failed");
+        slam->shutdown();
+        return EXIT_FAILURE;
+    }
+
+    struct sockaddr_in server_addr {};
+    server_addr.sin_family = AF_INET;
+    const char* ip_address = cfg->yaml_node_["SocketPublisher"]["address"].as<std::string>().c_str();
+    int port = cfg->yaml_node_["SocketPublisher"]["port"].as<int>();
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = inet_addr(ip_address);
+
+    if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection failed");
+        slam->shutdown();
+        close(sock);
+        return EXIT_FAILURE;
+    }
+
+    // Viewer initialization based on input configuration
+    #ifdef HAVE_PANGOLIN_VIEWER
+    std::shared_ptr<pangolin_viewer::viewer> pangolin_viewer;
+    if (viewer_string == "pangolin_viewer") {
+        pangolin_viewer = std::make_shared<pangolin_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "PangolinViewer"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+    }
+    #endif
+
+    // Shared data structure for SLAM frames and pose
+    struct FramePoseData {
+        cv::Mat color_frame, depth_frame;
+        Eigen::Matrix4d pose;
+        bool has_pose = false;
+    };
+    std::mutex data_mutex;
+    FramePoseData shared_data;
+
+    bool is_running = true;
+    unsigned int num_frames = 0;
+    std::vector<double> tracking_times;
+
+    // SLAM processing thread
+    std::thread slam_thread([&]() {
+        while (is_running) {
+            rs2::frameset frames;
+            try {
+                frames = rs_pipe.wait_for_frames();
+            } catch (const rs2::error&) {
+                break;
+            }
+
+            // Retrieve color and depth frames
+            rs2::video_frame color_frame = frames.get_color_frame();
+            rs2::depth_frame depth_frame = frames.get_depth_frame();
+
+            // Convert to OpenCV format
+            cv::Mat color_mat(cv::Size(640, 480), CV_8UC3, (void*)color_frame.get_data());
+            cv::Mat depth_mat(cv::Size(640, 480), CV_16U, (void*)depth_frame.get_data());
+
+            if (scale != 1.0) {
+                cv::resize(color_mat, color_mat, cv::Size(), scale, scale, cv::INTER_LINEAR);
+            }
+
+            const auto start_time = std::chrono::steady_clock::now();
+
+            // Feed the current frame to SLAM
+            double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(
+                                   std::chrono::system_clock::now().time_since_epoch())
+                                   .count();
+            slam->feed_monocular_frame(color_mat, timestamp, mask);
+
+            auto tracking_state = slam->get_frame_publisher()->get_tracking_state();
+            Eigen::Matrix4d cam_pose;
+            bool has_pose = false;
+
+            if (tracking_state == "Tracking") {
+                // Get the current camera pose from the map publisher
+                cam_pose = slam->get_map_publisher()->get_current_cam_pose();
+                has_pose = true;
+
+                // Print the pose matrix
+                std::cout << "Frame " << num_frames << " Pose:\n" << cam_pose << std::endl;
+
+                // Extract rotation and translation
+                Eigen::Matrix3d rotation = cam_pose.block<3, 3>(0, 0);
+                Eigen::Vector3d translation = cam_pose.block<3, 1>(0, 3);
+
+                // Convert rotation matrix to Euler angles (yaw, pitch, roll)
+                Eigen::Vector3d euler_angles = rotation.eulerAngles(2, 1, 0);
+                Eigen::Vector3d euler_angles_deg = euler_angles * 180.0 / M_PI;
+
+                // Print translation and rotation
+                std::cout << "Translation (x, y, z): " << translation.transpose() << std::endl;
+                std::cout << "Rotation (yaw, pitch, roll) in degrees: " << euler_angles_deg.transpose() << std::endl;
+            } else {
+                std::cout << "Frame " << num_frames << " tracking state: " << tracking_state << std::endl;
+            }
+
+            const auto end_time = std::chrono::steady_clock::now();
+            tracking_times.push_back(std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time).count());
+
+            // Update shared data
+            {
+                std::lock_guard<std::mutex> lock(data_mutex);
+                color_mat.copyTo(shared_data.color_frame);
+                depth_mat.copyTo(shared_data.depth_frame);
+                shared_data.pose = cam_pose;
+                shared_data.has_pose = has_pose;
+            }
+
+            ++num_frames;
+        }
+
+        slam->shutdown();
+    });
+
+    // Data transmission thread
+    std::thread data_thread([&]() {
+        while (is_running) {
+            cv::Mat color_local, depth_local;
+            Eigen::Matrix4d pose_local;
+            bool has_pose_local = false;
+
+            // Retrieve shared data
+            {
+                std::lock_guard<std::mutex> lock(data_mutex);
+                if (!shared_data.color_frame.empty()) {
+                    shared_data.color_frame.copyTo(color_local);
+                }
+                if (!shared_data.depth_frame.empty()) {
+                    shared_data.depth_frame.copyTo(depth_local);
+                }
+                has_pose_local = shared_data.has_pose;
+                pose_local = shared_data.pose;
+            }
+
+            if (!color_local.empty()) {
+                // Transmit color frame as JPEG
+                std::vector<uchar> buf;
+                cv::imencode(".jpg", color_local, buf);
+                int size = buf.size();
+                int32_t net_size = htonl(size);
+
+                send(sock, &net_size, sizeof(net_size), 0);
+                send(sock, buf.data(), size, 0);
+
+                // Transmit depth frame as PNG
+                if (!depth_local.empty()) {
+                    // Normalize depth image for visualization
+                    cv::Mat depth_normalized;
+                    double minVal, maxVal;
+                    cv::minMaxLoc(depth_local, &minVal, &maxVal);
+                    depth_local.convertTo(depth_normalized, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
+
+                    // Encode depth image
+                    std::vector<uchar> depth_buf;
+                    cv::imencode(".png", depth_normalized, depth_buf);
+                    int depth_size = depth_buf.size();
+                    int32_t depth_net_size = htonl(depth_size);
+
+                    send(sock, &depth_net_size, sizeof(depth_net_size), 0);
+                    send(sock, depth_buf.data(), depth_size, 0);
+                } else {
+                    // Send zero size if depth frame is empty
+                    int32_t depth_net_size = htonl(0);
+                    send(sock, &depth_net_size, sizeof(depth_net_size), 0);
+                }
+
+                // Always transmit pose data
+                double pose_data[16];
+                if (has_pose_local) {
+                    std::memcpy(pose_data, pose_local.data(), sizeof(pose_data));
+                } else {
+                    // Send identity matrix or zeros if no pose is available
+                    std::fill(pose_data, pose_data + 16, 0.0);
+                    pose_data[0] = pose_data[5] = pose_data[10] = pose_data[15] = 1.0; // Identity matrix
+                }
+                send(sock, pose_data, sizeof(pose_data), 0);
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(33));
+        }
+    });
+
+
+
+    // Visualization loop
+    std::thread visualization_thread([&]() {
+        while (is_running) {
+            cv::Mat color_display, depth_display;
+
+            {
+                std::lock_guard<std::mutex> lock(data_mutex);
+                if (!shared_data.color_frame.empty()) {
+                    shared_data.color_frame.copyTo(color_display);
+                }
+                if (!shared_data.depth_frame.empty()) {
+                    shared_data.depth_frame.convertTo(depth_display, CV_8U, 0.03);
+                }
+            }
+
+            if (!color_display.empty()) {
+                cv::imshow("Color Frame", color_display);
+            }
+            if (!depth_display.empty()) {
+                cv::imshow("Depth Frame", depth_display);
+            }
+
+            if (cv::waitKey(1) == 27) { // ESC to exit
+                is_running = false;
+                break;
+            }
+        }
+    });
+
+    if (viewer_string == "pangolin_viewer") {
+        #ifdef HAVE_PANGOLIN_VIEWER
+        pangolin_viewer->run();
+        #endif
+    }
+
+    // Wait for threads to complete
+    slam_thread.join();
+    data_thread.join();
+    visualization_thread.join();
+
+    close(sock);
+
+    // Save the map database
+    if (!map_db_path.empty() && !slam->save_map_database(map_db_path)) {
+        return EXIT_FAILURE;
+    }
+
+    // Output tracking performance
+    std::sort(tracking_times.begin(), tracking_times.end());
+    double total_time = std::accumulate(tracking_times.begin(), tracking_times.end(), 0.0);
+    std::cout << "Median tracking time: " << tracking_times.at(tracking_times.size() / 2) << " s\n";
+    std::cout << "Mean tracking time: " << total_time / tracking_times.size() << " s\n";
+
+    return EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1764,7 +2568,7 @@ int main(int argc, char* argv[]) {
     if (slam->get_camera()->setup_type_ == stella_vslam::camera::setup_type_t::Monocular) {
         // Select the appropriate tracking function based on the camera name
         if (camera_name == "ZED2") {
-            ret = mono_tracking_zed_pose(slam,
+            ret = mono_tracking_zed_pose_depth(slam,
                                     cfg,
                                     cam_num->value(),
                                     mask_img_path->value(),
@@ -1773,7 +2577,8 @@ int main(int argc, char* argv[]) {
                                     viewer_string);
         }
         else if (camera_name == "Intel RealSense D435") {
-            ret = mono_tracking_realsense_pose(slam,
+
+            ret = mono_tracking_realsense_pose_depth(slam,
                                           cfg,
                                           cam_num->value(),
                                           mask_img_path->value(),
