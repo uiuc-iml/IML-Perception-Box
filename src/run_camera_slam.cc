@@ -971,6 +971,9 @@ int mono_tracking_zed_pose(const std::shared_ptr<stella_vslam::system>& slam,
 
 
 
+
+
+
 // Include necessary headers
 #include <iostream>
 #include <vector>
@@ -1008,12 +1011,12 @@ int mono_tracking_zed_pose(const std::shared_ptr<stella_vslam::system>& slam,
 
 // Define the function
 int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& slam,
-                                 const std::shared_ptr<stella_vslam::config>& cfg,
-                                 const unsigned int cam_num,
-                                 const std::string& mask_img_path,
-                                 const float scale,
-                                 const std::string& map_db_path,
-                                 const std::string& viewer_string) {
+                           const std::shared_ptr<stella_vslam::config>& cfg,
+                           const unsigned int cam_num,
+                           const std::string& mask_img_path,
+                           const float scale,
+                           const std::string& map_db_path,
+                           const std::string& viewer_string) {
     // Load the mask image if provided
     const cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE);
 
@@ -1061,7 +1064,6 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
     if (viewer_string == "iridescence_viewer") {
         iridescence_viewer = std::make_shared<iridescence_viewer::viewer>(
             stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "IridescenceViewer"),
-            slam,
             slam->get_frame_publisher(),
             slam->get_map_publisher());
         // Add controls to the viewer
@@ -1139,13 +1141,13 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
     FramePoseData shared_data;
 
     // Variables for controlling the loop and tracking times
-    bool is_running = true; // Use a single variable to control all threads
+    bool is_not_end = true;
     unsigned int num_frame = 0;
     std::vector<double> track_times;
 
     // Thread for SLAM processing
     std::thread slam_thread([&]() {
-        while (is_running) {
+        while (is_not_end) {
             // Pause functionality for the viewer (if using iridescence_viewer)
 #ifdef HAVE_IRIDESCENCE_VIEWER
             while (true) {
@@ -1171,13 +1173,13 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
             {
                 std::lock_guard<std::mutex> lock(mtx_terminate);
                 if (terminate_is_requested) {
-                    is_running = false;
+                    is_not_end = false;
                     break;
                 }
             }
 #else
             if (slam->terminate_is_requested()) {
-                is_running = false;
+                is_not_end = false;
                 break;
             }
 #endif
@@ -1277,7 +1279,7 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
 
     // Thread for sending image and pose data over the socket
     std::thread data_sender_thread([&]() {
-        while (is_running) {
+        while (is_not_end) {
             cv::Mat color_local, depth_local;
             Eigen::Matrix4d local_pose;
             bool local_has_pose = false;
@@ -1396,66 +1398,24 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
         }
     });
 
-    // Thread for visualization
-    std::thread visualization_thread([&]() {
-        while (is_running) {
-            cv::Mat color_display, depth_display;
-
-            {
-                std::lock_guard<std::mutex> lock(data_mutex);
-                if (!shared_data.color_frame.empty()) {
-                    shared_data.color_frame.copyTo(color_display);
-                }
-                if (!shared_data.depth_frame.empty()) {
-                    // Normalize depth for visualization
-                    double minVal, maxVal;
-                    cv::minMaxLoc(shared_data.depth_frame, &minVal, &maxVal);
-                    shared_data.depth_frame.convertTo(depth_display, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
-                }
-            }
-
-            if (!color_display.empty()) {
-                cv::imshow("Color Frame", color_display);
-            }
-            if (!depth_display.empty()) {
-                cv::imshow("Depth Frame", depth_display);
-            }
-
-            if (cv::waitKey(1) == 27) { // ESC to exit
-                is_running = false;
-                break;
-            }
-        }
-    });
-
     // Run the viewer in the main thread
     if (viewer_string == "pangolin_viewer") {
 #ifdef HAVE_PANGOLIN_VIEWER
         pangolin_viewer->run();
-        is_running = false; // Signal threads to exit
 #endif
     }
-    else if (viewer_string == "iridescence_viewer") {
+    if (viewer_string == "iridescence_viewer") {
 #ifdef HAVE_IRIDESCENCE_VIEWER
         iridescence_viewer->run();
-        is_running = false; // Signal threads to exit
 #endif
     }
-    else if (viewer_string == "socket_publisher") {
+    if (viewer_string == "socket_publisher") {
 #ifdef HAVE_SOCKET_PUBLISHER
         socket_publisher->run();
-        is_running = false; // Signal threads to exit
 #endif
-    }
-    else {
-        // No viewer specified, wait until ESC is pressed in visualization_thread
-        while (is_running) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
     }
 
     // Wait for threads to finish
-    visualization_thread.join();
     data_sender_thread.join();
     slam_thread.join();
 
@@ -1480,7 +1440,6 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
 
     return EXIT_SUCCESS;
 }
-
 
 
 
@@ -2382,37 +2341,6 @@ int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::syste
         }
     });
 
-
-
-    // Visualization loop
-    std::thread visualization_thread([&]() {
-        while (is_running) {
-            cv::Mat color_display, depth_display;
-
-            {
-                std::lock_guard<std::mutex> lock(data_mutex);
-                if (!shared_data.color_frame.empty()) {
-                    shared_data.color_frame.copyTo(color_display);
-                }
-                if (!shared_data.depth_frame.empty()) {
-                    shared_data.depth_frame.convertTo(depth_display, CV_8U, 0.03);
-                }
-            }
-
-            if (!color_display.empty()) {
-                cv::imshow("Color Frame", color_display);
-            }
-            if (!depth_display.empty()) {
-                cv::imshow("Depth Frame", depth_display);
-            }
-
-            if (cv::waitKey(1) == 27) { // ESC to exit
-                is_running = false;
-                break;
-            }
-        }
-    });
-
     if (viewer_string == "pangolin_viewer") {
         #ifdef HAVE_PANGOLIN_VIEWER
         pangolin_viewer->run();
@@ -2422,7 +2350,6 @@ int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::syste
     // Wait for threads to complete
     slam_thread.join();
     data_thread.join();
-    visualization_thread.join();
 
     close(sock);
 
