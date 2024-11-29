@@ -31,7 +31,7 @@ This project is built as a fork of the [stella-vslam-examples](https://github.co
 
 ## Features
 
-- **Multi-Camera Support:** Monocular, stereo, and RGB-D cameras.
+- **Multi-Camera Support:** Monocular, and RGB-D cameras.
 - **Flexible Input:** Supports video files and live camera feeds.
 - **Pangolin Viewer:** OpenGL-based viewer for real-time visualization.
 - **Optimized for Embedded Systems:** Suitable for NVIDIA Jetson platforms.
