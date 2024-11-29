@@ -9,8 +9,8 @@
   - [2. Install Required Libraries](#2-install-required-libraries)
   - [3. Build and Install Stella-VSLAM](#3-build-and-install-stella-vslam)
   - [4. Build and Install Pangolin Viewer](#4-build-and-install-pangolin-viewer)
-  - [5. Build and Install Examples](#5-Build-Perception-Box)
-- [Usage](#usage)
+  - [5. Build Perception Box](#5-Build-Perception-Box)
+- [Usage](#Run-Perception-Box)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
 
@@ -206,5 +206,20 @@ Example:
 ./run_camera_slam --vocab /home/perception/lib/stella_vslam_examples/build/orb_vocab.fbow --config /home/perception/lib/stella_vslam_examples/build/realsense.yaml --number 4 --viewer pangolin_viewer
 ```
 Note: Adjust the paths based on the local configuration of your system
+
+## Acknowledgments
+
+This project is built as a fork of the [stella-vslam-examples](https://github.com/stella-cv/stella_vslam_examples) repository, with contributions from members of the [IML Research Team](https://iml.lab.illinois.edu/):
+
+- **Aaditya Voruganti** ([GitHub](https://github.com/aadityavoru))
+- **Vallabh Nadgir** ([GitHub](https://github.com/vallabhv1))
+
+We extend our gratitude to our mentors and advisors for their guidance and support:
+
+- **Professor Kris Hauser**  
+- **João Marques**
+
+
+- 
 
 
