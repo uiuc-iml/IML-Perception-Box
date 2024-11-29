@@ -9,7 +9,7 @@
   - [2. Install Required Libraries](#2-install-required-libraries)
   - [3. Build and Install Stella-VSLAM](#3-build-and-install-stella-vslam)
   - [4. Build and Install Pangolin Viewer](#4-build-and-install-pangolin-viewer)
-  - [5. Build and Install Examples](#5-build-and-install-examples)
+  - [5. Build and Install Examples](#5-Build-Perception-Box)
 - [Usage](#usage)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
