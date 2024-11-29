@@ -188,3 +188,23 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 make -j$(nproc)
 sudo make install
 ```
+
+### 5. Build Perception Box
+
+```bash
+git clone https://github.com/uiuc-iml/Perception-Box.git
+cd Perception-Box
+mkdir build
+cd build
+cmake ..
+```
+Download the Vocab file from: [Vocab file](https://drive.google.com/file/d/158_S22qdE8fUNCVYpWLcF2e-X8t7DLLH/view?usp=sharing)
+
+### Run Perception Box
+Example:
+```bash
+./run_camera_slam --vocab /home/perception/lib/stella_vslam_examples/build/orb_vocab.fbow --config /home/perception/lib/stella_vslam_examples/build/realsense.yaml --number 4 --viewer pangolin_viewer
+```
+Note: Adjust the paths based on the local configuration of your system
+
+
