@@ -1,20 +1,4 @@
-# stella_vslam_examples
-
-## License
-
-This module was originally included in xdspacelab/openvslam. Therefore, the license follows the original license of xdspacelab/openvslam (BSD 2-Clause).
-
-The following files are derived from third-party libraries.
-
-- `./3rd/filesystem` : [gulrak/filesystem](https://github.com/gulrak/filesystem) (MIT license)
-- `./3rd/popl` : [badaix/popl \[v1.2.0\]](https://github.com/badaix/popl) (MIT license)
-
-
-# Stella-VSLAM on NVIDIA Jetson with Pangolin Viewer
-
-[Stella-VSLAM](https://github.com/stella-cv/stella_vslam) is a versatile and highly customizable SLAM framework. This guide provides step-by-step instructions to install Stella-VSLAM with Pangolin Viewer on NVIDIA Jetson devices running Ubuntu.
-
----
+# Perception Box
 
 ## Table of Contents
 
