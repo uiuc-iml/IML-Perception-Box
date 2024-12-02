@@ -6,13 +6,13 @@
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-### Ver 1
+#### Ver 1
   - [1. Install Dependencies](#1-install-dependencies)
   - [2. Install Required Libraries](#2-install-required-libraries)
   - [3. Build and Install Stella-VSLAM](#3-build-and-install-stella-vslam)
   - [4. Build and Install Pangolin Viewer](#4-build-and-install-pangolin-viewer)
   - [5. Build Perception Box](#5-Build-Perception-Box)
-### Ver 2
+#### Ver 2
   - [Bash Script Installation](#Bash-Installation)
 - [Usage](#Run-Perception-Box)
 - [License](#license)
@@ -216,7 +216,7 @@ cmake ..
 ```
 Download the Vocab file from: [Vocab file](https://drive.google.com/file/d/158_S22qdE8fUNCVYpWLcF2e-X8t7DLLH/view?usp=sharing)
 
-### Bash Installation (Beta Version)
+### Bash Installation
 ```bash
 cd ~/Downloads
 git clone "https://github.com/uiuc-iml/Perception-Box.git"
