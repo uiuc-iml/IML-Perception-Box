@@ -15,7 +15,7 @@ PANGOLIN_REPO="https://github.com/stevenlovegrove/Pangolin.git"
 PANGOLIN_CHECKOUT="eab3d3449a33a042b1ee7225e1b8b593b1b21e3e"
 STELLA_VSLAM_REPO="https://github.com/stella-cv/stella_vslam.git"
 PANGOLIN_VIEWER_REPO="https://github.com/stella-cv/pangolin_viewer.git"
-PERCEPTION_BOX_REPO="https://github.com/uiuc-iml/Perception-Box.git"
+#PERCEPTION_BOX_REPO="https://github.com/uiuc-iml/Perception-Box.git"
 
 # Function to install system dependencies
 install_dependencies() {
@@ -183,7 +183,6 @@ build_pangolin_viewer() {
 build_perception_box() {
     echo "Building Perception Box..."
     cd ~/Downloads
-    git clone ${PERCEPTION_BOX_REPO}
     cd Perception-Box
     mkdir build && cd build
     cmake ..
