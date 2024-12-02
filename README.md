@@ -19,7 +19,6 @@
 ---
 
 - [Usage](#Run-Perception-Box)
-- [License](#license)
 
 
 ---
