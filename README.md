@@ -6,6 +6,8 @@
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
+
+---
 #### Ver 1
   - [1. Install Dependencies](#1-install-dependencies)
   - [2. Install Required Libraries](#2-install-required-libraries)
@@ -14,6 +16,8 @@
   - [5. Build Perception Box](#5-Build-Perception-Box)
 #### Ver 2
   - [Bash Script Installation](#Bash-Installation)
+---
+
 - [Usage](#Run-Perception-Box)
 - [License](#license)
 
