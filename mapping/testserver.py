@@ -13,7 +13,7 @@ import yaml
 # parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 # sys.path.append(parent_dir)
 from reconstruction import Reconstruction
-from segmentation_model_loader import TSegmenter, FineTunedTSegmenter, MaskformerSegmenter
+from segmentation_model_loader import MaskformerSegmenter
 # from sens_reader import scannet_scene_reader, ScanNetPPReader
 
 
@@ -41,8 +41,8 @@ class MyServer:
         root_dir = "/home/motion/Data/scannet_v2"
         scene = "scene0343_00"  
         lim = -1
-        self.my_ds = scannet_scene_reader(root_dir, scene, lim=lim, disable_tqdm=True)
-        self.total_len = len(self.my_ds)
+        # self.my_ds = scannet_scene_reader(root_dir, scene, lim=lim, disable_tqdm=True)
+        # self.total_len = len(self.my_ds)
 
         # Initialize queue and indices
         self.index_queue = 0

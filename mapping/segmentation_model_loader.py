@@ -234,192 +234,192 @@ def get_gpu_memory_usage():
 #         return new_state_dict
 
 
-class TSegmenter:
-    def __init__(self,temperature = 1):
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b4-finetuned-ade-512-512")
-        self.model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b4-finetuned-ade-512-512").to(self.device)
-        self.model.eval()
-        df = pd.read_csv("./objectinfo150_2.csv")
-        self.class_mapping = df.NewClass.values.astype(np.int64)
-        self.cm = torch.from_numpy(self.class_mapping).to(self.device)
-        self.temperature = temperature
+# class TSegmenter:
+#     def __init__(self,temperature = 1):
+#         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+#         self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b4-finetuned-ade-512-512")
+#         self.model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b4-finetuned-ade-512-512").to(self.device)
+#         self.model.eval()
+#         df = pd.read_csv("./objectinfo150_2.csv")
+#         self.class_mapping = df.NewClass.values.astype(np.int64)
+#         self.cm = torch.from_numpy(self.class_mapping).to(self.device)
+#         self.temperature = temperature
         
-        self.softmax = nn.Softmax(dim = 1)
+#         self.softmax = nn.Softmax(dim = 1)
 
-        # for idx,new_class in enumerate(self.class_mapping):
-        #     class_matrix[idx,new_class] = 1
+#         # for idx,new_class in enumerate(self.class_mapping):
+#         #     class_matrix[idx,new_class] = 1
 
-        # self.cm = torch.from_numpy(class_matrix.astype(np.float32)).to(self.device)
-    def set_temperature(self,temperature):
-        self.temperature = temperature
+#         # self.cm = torch.from_numpy(class_matrix.astype(np.float32)).to(self.device)
+#     def set_temperature(self,temperature):
+#         self.temperature = temperature
         
-    def classify(self,rgb,depth = None,x=None,y = None,temperature = None):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
-            # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
-            pred = logits
+#     def classify(self,rgb,depth = None,x=None,y = None,temperature = None):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
+#             # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
+#             pred = logits
 
-            if((x == None) or( y == None)):
-                pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
-            else:
-                pred = F.interpolate(pred, (x,y),mode='nearest')
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
+#             else:
+#                 pred = F.interpolate(pred, (x,y),mode='nearest')
 
-            if(temperature):
-                # print('applying temperature scaling')
-                pred = self.softmax(pred/temperature)
-            else:
-                pred = self.softmax(pred/self.temperature)
+#             if(temperature):
+#                 # print('applying temperature scaling')
+#                 pred = self.softmax(pred/temperature)
+#             else:
+#                 pred = self.softmax(pred/self.temperature)
 
-            pred = self.class_mapping[torch.argmax(pred,axis = 1).squeeze().detach().cpu().numpy()]
-        return pred
-    def get_pred_probs(self,rgb,depth = None,x = None,y = None,temperature = None):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            # print(inputs['pixel_values'].shape)
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
-            # print(logits.shape)
-            # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
-            pred = self.aggregate_logits(logits)
-            # print(pred.shape)
-            # pred = logits.unsqueeze(0)
-            if((x == None) or( y == None)):
-                pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
-            else:
-                pred = F.interpolate(pred, (x,y),mode='nearest')
+#             pred = self.class_mapping[torch.argmax(pred,axis = 1).squeeze().detach().cpu().numpy()]
+#         return pred
+#     def get_pred_probs(self,rgb,depth = None,x = None,y = None,temperature = None):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             # print(inputs['pixel_values'].shape)
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
+#             # print(logits.shape)
+#             # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
+#             pred = self.aggregate_logits(logits)
+#             # print(pred.shape)
+#             # pred = logits.unsqueeze(0)
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
+#             else:
+#                 pred = F.interpolate(pred, (x,y),mode='nearest')
 
-            if(temperature):
-                # print('applying temperature scaling')
-                pred = self.softmax(pred/temperature)
-            else:
-                pred = self.softmax(pred/self.temperature)
+#             if(temperature):
+#                 # print('applying temperature scaling')
+#                 pred = self.softmax(pred/temperature)
+#             else:
+#                 pred = self.softmax(pred/self.temperature)
         
-        return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
+#         return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
 
 
-    def get_raw_logits(self,rgb,depth = None,x=None,y = None):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            # print(inputs['pixel_values'].shape)
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
-            if((x == None) or( y == None)):
-                pred = F.interpolate(logits, (image.height,image.width),mode='nearest')
-            else:
-                pred = F.interpolate(logits, (x,y),mode='nearest')
-        return pred
-    def aggregate_logits(self,logits):
-        """Presumes that you still have the batch_size as 0th dimension.
+#     def get_raw_logits(self,rgb,depth = None,x=None,y = None):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             # print(inputs['pixel_values'].shape)
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(logits, (image.height,image.width),mode='nearest')
+#             else:
+#                 pred = F.interpolate(logits, (x,y),mode='nearest')
+#         return pred
+#     def aggregate_logits(self,logits):
+#         """Presumes that you still have the batch_size as 0th dimension.
 
-        Args:
-            logits (_type_): _description_
-        """
-        return scatter(logits,self.cm,dim = 1,reduce = 'max')
+#         Args:
+#             logits (_type_): _description_
+#         """
+#         return scatter(logits,self.cm,dim = 1,reduce = 'max')
 
-    def get_aggregate_logits(self,rgb,depth = None,x = None,y = None):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            # print(inputs['pixel_values'].shape)
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
-            # print(logits.shape)
-            # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
-            pred = self.aggregate_logits(logits)
-            if((x == None) or( y == None)):
-                pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
-            else:
-                pred = F.interpolate(pred, (x,y),mode='nearest')
+#     def get_aggregate_logits(self,rgb,depth = None,x = None,y = None):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             # print(inputs['pixel_values'].shape)
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
+#             # print(logits.shape)
+#             # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
+#             pred = self.aggregate_logits(logits)
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
+#             else:
+#                 pred = F.interpolate(pred, (x,y),mode='nearest')
         
-        return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
+#         return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
 
 
-class FineTunedTSegmenter():
-    def __init__(self,temperature = 1,model_ckpt = "../segmentation_model_checkpoints/Segformer"):
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b4-finetuned-ade-512-512")
-        self.model = SegformerForSemanticSegmentation.from_pretrained(model_ckpt).to(self.device)
-        self.model.eval()
-        self.temperature = temperature
+# class FineTunedTSegmenter():
+#     def __init__(self,temperature = 1,model_ckpt = "../segmentation_model_checkpoints/Segformer"):
+#         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+#         self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b4-finetuned-ade-512-512")
+#         self.model = SegformerForSemanticSegmentation.from_pretrained(model_ckpt).to(self.device)
+#         self.model.eval()
+#         self.temperature = temperature
         
-        self.softmax = nn.Softmax(dim = 1)
+#         self.softmax = nn.Softmax(dim = 1)
 
-        # for idx,new_class in enumerate(self.class_mapping):
-        #     class_matrix[idx,new_class] = 1
+#         # for idx,new_class in enumerate(self.class_mapping):
+#         #     class_matrix[idx,new_class] = 1
 
-        # self.cm = torch.from_numpy(class_matrix.astype(np.float32)).to(self.device)
-    def set_temperature(self,temperature):
-        self.temperature = temperature
+#         # self.cm = torch.from_numpy(class_matrix.astype(np.float32)).to(self.device)
+#     def set_temperature(self,temperature):
+#         self.temperature = temperature
         
-    def classify(self,rgb,depth = None,x=None,y = None,temperature = None):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
+#     def classify(self,rgb,depth = None,x=None,y = None,temperature = None):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
 
 
-            # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
-            if((x == None) or( y == None)):
-                pred = F.interpolate(logits, (image.height,image.width),mode='bilinear')
-            else:
-                pred = F.interpolate(logits, (x,y),mode='bilinear')
+#             # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(logits, (image.height,image.width),mode='bilinear')
+#             else:
+#                 pred = F.interpolate(logits, (x,y),mode='bilinear')
 
-            if(temperature):
-                # print('applying temperature scaling')
-                pred = self.softmax(pred/temperature)
-            else:
-                pred = self.softmax(pred/self.temperature)
+#             if(temperature):
+#                 # print('applying temperature scaling')
+#                 pred = self.softmax(pred/temperature)
+#             else:
+#                 pred = self.softmax(pred/self.temperature)
 
-            pred = torch.argmax(pred,axis = 1)
+#             pred = torch.argmax(pred,axis = 1)
 
-        return pred.squeeze().detach().cpu().numpy()
+#         return pred.squeeze().detach().cpu().numpy()
 
-    def get_pred_probs(self,rgb,depth = None,x = None,y = None,temperature = None):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            # print(inputs['pixel_values'].shape)
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
-            # print(logits.shape)
-            # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
-            # pred = self.aggregate_logits(logits)
-            pred = logits
-            # print(pred.shape)
-            # pred = logits.unsqueeze(0)
+#     def get_pred_probs(self,rgb,depth = None,x = None,y = None,temperature = None):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             # print(inputs['pixel_values'].shape)
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
+#             # print(logits.shape)
+#             # pred = torch.tensordot(logits,self.cm,dims = ([0],[0])).permute((2,0,1)).unsqueeze(0)
+#             # pred = self.aggregate_logits(logits)
+#             pred = logits
+#             # print(pred.shape)
+#             # pred = logits.unsqueeze(0)
             
-            if(temperature):
-                # print('applying temperature scaling')
-                pred = self.softmax(pred/temperature)
-            else:
-                pred = self.softmax(pred/self.temperature)
-            if((x == None) or( y == None)):
-                pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
-            else:
-                pred = F.interpolate(pred, (x,y),mode='nearest')
+#             if(temperature):
+#                 # print('applying temperature scaling')
+#                 pred = self.softmax(pred/temperature)
+#             else:
+#                 pred = self.softmax(pred/self.temperature)
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(pred, (image.height,image.width),mode='nearest')
+#             else:
+#                 pred = F.interpolate(pred, (x,y),mode='nearest')
         
-        return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
+#         return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
 
 
-    def get_raw_logits(self,rgb,depth = None,x=None,y = None,temperature = 1):
-        with torch.no_grad():
-            image = Image.fromarray(np.uint8(rgb))
-            inputs = self.feature_extractor(images=image, return_tensors="pt")
-            # print(inputs['pixel_values'].shape)
-            outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
-            logits = outputs.logits
-            if((x == None) or( y == None)):
-                pred = F.interpolate(logits, (image.height,image.width),mode='nearest')
-            else:
-                pred = F.interpolate(logits, (x,y),mode='nearest')
-        return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
+#     def get_raw_logits(self,rgb,depth = None,x=None,y = None,temperature = 1):
+#         with torch.no_grad():
+#             image = Image.fromarray(np.uint8(rgb))
+#             inputs = self.feature_extractor(images=image, return_tensors="pt")
+#             # print(inputs['pixel_values'].shape)
+#             outputs = self.model(pixel_values=inputs['pixel_values'].to(self.device))
+#             logits = outputs.logits
+#             if((x == None) or( y == None)):
+#                 pred = F.interpolate(logits, (image.height,image.width),mode='nearest')
+#             else:
+#                 pred = F.interpolate(logits, (x,y),mode='nearest')
+#         return pred.squeeze().detach().permute((1,2,0)).contiguous().cpu().numpy()
 
 
 
