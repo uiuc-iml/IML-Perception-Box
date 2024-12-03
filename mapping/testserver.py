@@ -57,10 +57,10 @@ class MyServer:
 
     def load_config(self):
         # Read configuration values from the YAML file
-        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        # config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
         
-        with open(config_path, 'r') as config_file:
-            config = yaml.safe_load(config_file)
+        # with open(config_path, 'r') as config_file:
+        #     config = yaml.safe_load(config_file)
 
         # Store values from the config into instance variables
         self.voxel_size = config.get('voxel_size', 0.025)
@@ -90,6 +90,16 @@ class MyServer:
         self.frame_height = config["Camera"]["rows"]
         self.ip_address = config["SocketPublisher"]["address"]
         self.port = config["SocketPublisher"]["port"]
+
+
+        # get mappnig params
+        self.voxel_size = config["Mapping"]["voxel_size"]
+        self.trunc = self.voxel_size * config["Mapping"]["truncation_vsize_multiple"]
+        self.res = config["Mapping"]["res"]
+        self.n_labels = config["Mapping"]["n_labels"]
+        self.depth_scale = config["Mapping"]["depth_scale"]
+        self.depth_max = config["Mapping"]["depth_max"]
+        self.miu = config["Mapping"]["miu"]
 
 
 
