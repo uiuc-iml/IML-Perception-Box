@@ -113,7 +113,7 @@ class MyServer:
                 integrate_color=False,
             )
             self.task_thread = threading.Thread(target=self.mapping, daemon=True)
-            self.queue_thread = threading.Thread(target=self.fill_queue, daemon=True)
+            self.queue_thread = threading.Thread(target=self.fill_queue_from_socket, daemon=True)
             self.queue_thread.start()
             self.task_thread.start()
             return "Task started"
