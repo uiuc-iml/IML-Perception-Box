@@ -1520,210 +1520,210 @@ class LearnedGeneralizedIntegration(GeneralizedIntegration):
 
 
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torch.utils.dlpack
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import torch.optim as optim
+# import torch.utils.dlpack
 
-import lightning as L
-from litautoencoder import LitAutoEncoder
-from litautodecoder import LitAutoDecoder
+# import lightning as L
+# from litautoencoder import LitAutoEncoder
+# from litautodecoder import LitAutoDecoder
 
-class Encoder(nn.Module):
-    def __init__(self, input_dim, encoded_dim):
-        super(Encoder, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 256)
-        self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 64)
-        self.fc4 = nn.Linear(64, encoded_dim)
+# class Encoder(nn.Module):
+#     def __init__(self, input_dim, encoded_dim):
+#         super(Encoder, self).__init__()
+#         self.fc1 = nn.Linear(input_dim, 256)
+#         self.fc2 = nn.Linear(256, 128)
+#         self.fc3 = nn.Linear(128, 64)
+#         self.fc4 = nn.Linear(64, encoded_dim)
 
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
+#     def forward(self, x):
+#         x = F.relu(self.fc1(x))
+#         x = F.relu(self.fc2(x))
+#         x = F.relu(self.fc3(x))
+#         x = self.fc4(x)
+#         return x
 
-# Define the decoder MLP with four layers
-class Decoder(nn.Module):
-    def __init__(self, encoded_dim, output_dim):
-        super(Decoder, self).__init__()
-        self.fc1 = nn.Linear(encoded_dim, 64)
-        self.fc2 = nn.Linear(64, 128)
-        self.fc3 = nn.Linear(128, 256)
-        self.fc4 = nn.Linear(256, output_dim)
+# # Define the decoder MLP with four layers
+# class Decoder(nn.Module):
+#     def __init__(self, encoded_dim, output_dim):
+#         super(Decoder, self).__init__()
+#         self.fc1 = nn.Linear(encoded_dim, 64)
+#         self.fc2 = nn.Linear(64, 128)
+#         self.fc3 = nn.Linear(128, 256)
+#         self.fc4 = nn.Linear(256, output_dim)
 
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
-        x = F.softmax(x, dim=-1)
-        return x
+#     def forward(self, x):
+#         x = F.relu(self.fc1(x))
+#         x = F.relu(self.fc2(x))
+#         x = F.relu(self.fc3(x))
+#         x = self.fc4(x)
+#         x = F.softmax(x, dim=-1)
+#         return x
 
-encoded_dimension = 4
-encoder_path = 'scannetpp_mseloss_weights/encoded_dim_4/na-epoch=25-val_loss=0.00004.ckpt'
-encoder_model = LitAutoEncoder.load_from_checkpoint(encoder_path, encoder=Encoder(
-    150, encoded_dimension), decoder=Decoder(encoded_dimension, 150))
+# encoded_dimension = 4
+# encoder_path = 'scannetpp_mseloss_weights/encoded_dim_4/na-epoch=25-val_loss=0.00004.ckpt'
+# encoder_model = LitAutoEncoder.load_from_checkpoint(encoder_path, encoder=Encoder(
+#     150, encoded_dimension), decoder=Decoder(encoded_dimension, 150))
 
-# # decoder_path = 'na-epoch=21-val_loss=0.00000.ckpt'
-# # decoder_model = LitAutoDecoder.load_from_checkpoint(decoder_path, encoder=Encoder(
-# #     21, 8), decoder=Decoder(8, 21))
+# # # decoder_path = 'na-epoch=21-val_loss=0.00000.ckpt'
+# # # decoder_model = LitAutoDecoder.load_from_checkpoint(decoder_path, encoder=Encoder(
+# # #     21, 8), decoder=Decoder(8, 21))
 
-class ProbabilisticAveragedEncodedReconstruction(Reconstruction):
-    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CUDA:0'),miu = 0.001,encoded_dim=encoded_dimension):
-        self.encoded_dim = encoded_dim
-        super().__init__(depth_scale,depth_max,res,voxel_size,trunc_multiplier,n_labels,integrate_color,device,miu)
+# class ProbabilisticAveragedEncodedReconstruction(Reconstruction):
+#     def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CUDA:0'),miu = 0.001,encoded_dim=encoded_dimension):
+#         self.encoded_dim = encoded_dim
+#         super().__init__(depth_scale,depth_max,res,voxel_size,trunc_multiplier,n_labels,integrate_color,device,miu)
 
-    def initialize_vbg(self):
-        if(not self.integrate_color):
-            self.vbg = o3d.t.geometry.VoxelBlockGrid(
-            ('tsdf', 'weight','encoded_vectors','semantic_weight'),
-            (o3c.float32, o3c.float32, o3c.float32,o3c.float32), ((1), (1), (self.encoded_dim),(1)),
-            self.voxel_size,self.res, 500000, self.device)
-            self.original_size = self.vbg.attribute('label').shape[0]
-            enc = self.vbg.attribute('encoded_vectors').reshape((-1,self.encoded_dim))
-            enc[:,:] = 0
-        else:
-            self.vbg = o3d.t.geometry.VoxelBlockGrid(
-            ('tsdf', 'weight','encoded_vectors','semantic_weight','color'),
-            (o3c.float32, o3c.float32, o3c.float32,o3c.float32,o3c.float32), ((1), (1), (self.encoded_dim),(1),(3)),
-            self.voxel_size,self.res, 500000, self.device)
-            self.original_size = self.vbg.attribute('label').shape[0]
-            enc = self.vbg.attribute('encoded_vectors').reshape((-1,self.encoded_dim))
-            enc[:,:] = 0
+#     def initialize_vbg(self):
+#         if(not self.integrate_color):
+#             self.vbg = o3d.t.geometry.VoxelBlockGrid(
+#             ('tsdf', 'weight','encoded_vectors','semantic_weight'),
+#             (o3c.float32, o3c.float32, o3c.float32,o3c.float32), ((1), (1), (self.encoded_dim),(1)),
+#             self.voxel_size,self.res, 500000, self.device)
+#             self.original_size = self.vbg.attribute('label').shape[0]
+#             enc = self.vbg.attribute('encoded_vectors').reshape((-1,self.encoded_dim))
+#             enc[:,:] = 0
+#         else:
+#             self.vbg = o3d.t.geometry.VoxelBlockGrid(
+#             ('tsdf', 'weight','encoded_vectors','semantic_weight','color'),
+#             (o3c.float32, o3c.float32, o3c.float32,o3c.float32,o3c.float32), ((1), (1), (self.encoded_dim),(1),(3)),
+#             self.voxel_size,self.res, 500000, self.device)
+#             self.original_size = self.vbg.attribute('label').shape[0]
+#             enc = self.vbg.attribute('encoded_vectors').reshape((-1,self.encoded_dim))
+#             enc[:,:] = 0
 
-    def update_semantics(self, semantic_label, v_proj, u_proj, valid_voxel_indices, mask_inlier, weight, scene=None):
+#     def update_semantics(self, semantic_label, v_proj, u_proj, valid_voxel_indices, mask_inlier, weight, scene=None):
 
-        # des = "/home/motion/semanticmapping/visuals/maskformer_default"
-        # arr_des = '/home/motion/semanticmapping/visuals/arrays/scene0427_00/cacherelease'
-        # plot_dir = os.path.join(des, "Maskformer Naive Averaging")
-        # arr_dir = os.path.join(arr_des, "Maskformer Naive Averaging")
-        # if not os.path.exists(plot_dir):
-        #     os.makedirs(plot_dir)
-        # if not os.path.exists(arr_dir):
-        #     os.makedirs(arr_dir)
+#         # des = "/home/motion/semanticmapping/visuals/maskformer_default"
+#         # arr_des = '/home/motion/semanticmapping/visuals/arrays/scene0427_00/cacherelease'
+#         # plot_dir = os.path.join(des, "Maskformer Naive Averaging")
+#         # arr_dir = os.path.join(arr_des, "Maskformer Naive Averaging")
+#         # if not os.path.exists(plot_dir):
+#         #     os.makedirs(plot_dir)
+#         # if not os.path.exists(arr_dir):
+#         #     os.makedirs(arr_dir)
 
 
 
-        semantic_label = semantic_label
+#         semantic_label = semantic_label
 
-        semantic_image = o3d.t.geometry.Image(semantic_label).to(self.device)
+#         semantic_image = o3d.t.geometry.Image(semantic_label).to(self.device)
         
-        semantic_readings = semantic_image.as_tensor()[v_proj,
-                                        u_proj].to(o3c.float32)
-        semantic = self.vbg.attribute('encoded_vectors').reshape((-1, self.encoded_dim))
-        semantic_weight = self.vbg.attribute('semantic_weight').reshape((-1))
-        # initializing previously unobserved voxels with uniform prior
-        #naive summing of probabilities
-        # semantic[valid_voxel_indices[weight[valid_voxel_indices].flatten() == 0]] += o3c.Tensor(np.array([1.0/self.n_labels]).astype(np.float32)).to(self.device)
-        semantic_weight[valid_voxel_indices[weight[valid_voxel_indices].flatten() == 0]] += o3c.Tensor(0).to(o3c.float32).to(self.device)
-        encodeinput = semantic_readings[mask_inlier]
+#         semantic_readings = semantic_image.as_tensor()[v_proj,
+#                                         u_proj].to(o3c.float32)
+#         semantic = self.vbg.attribute('encoded_vectors').reshape((-1, self.encoded_dim))
+#         semantic_weight = self.vbg.attribute('semantic_weight').reshape((-1))
+#         # initializing previously unobserved voxels with uniform prior
+#         #naive summing of probabilities
+#         # semantic[valid_voxel_indices[weight[valid_voxel_indices].flatten() == 0]] += o3c.Tensor(np.array([1.0/self.n_labels]).astype(np.float32)).to(self.device)
+#         semantic_weight[valid_voxel_indices[weight[valid_voxel_indices].flatten() == 0]] += o3c.Tensor(0).to(o3c.float32).to(self.device)
+#         encodeinput = semantic_readings[mask_inlier]
 
-        encodeinput_t = torch.utils.dlpack.from_dlpack(encodeinput.to_dlpack())
-        del encodeinput
-        with torch.no_grad():
-            encoded_obs_t = encoder_model.encode(encodeinput_t).contiguous()
-            encoded_obs = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(encoded_obs_t))
-            # del encodeinput_t
-            del encoded_obs_t
+#         encodeinput_t = torch.utils.dlpack.from_dlpack(encodeinput.to_dlpack())
+#         del encodeinput
+#         with torch.no_grad():
+#             encoded_obs_t = encoder_model.encode(encodeinput_t).contiguous()
+#             encoded_obs = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(encoded_obs_t))
+#             # del encodeinput_t
+#             del encoded_obs_t
 
-        #Bayesian update in log space    
-        semantic[valid_voxel_indices] = (semantic_weight[valid_voxel_indices].reshape((-1,1))*semantic[valid_voxel_indices]+encoded_obs)/(semantic_weight[valid_voxel_indices].reshape((-1,1))+1)
-        semantic_weight[valid_voxel_indices] += 1
-        o3d.core.cuda.synchronize()
-        # torch.cuda.synchronize()
-        torch.cuda.empty_cache()
-        o3d.core.cuda.release_cache()
+#         #Bayesian update in log space    
+#         semantic[valid_voxel_indices] = (semantic_weight[valid_voxel_indices].reshape((-1,1))*semantic[valid_voxel_indices]+encoded_obs)/(semantic_weight[valid_voxel_indices].reshape((-1,1))+1)
+#         semantic_weight[valid_voxel_indices] += 1
+#         o3d.core.cuda.synchronize()
+#         # torch.cuda.synchronize()
+#         torch.cuda.empty_cache()
+#         o3d.core.cuda.release_cache()
 
 
 
-    # def extract_point_cloud(self,return_raw_logits = False):
+#     # def extract_point_cloud(self,return_raw_logits = False):
 
-    #     """Returns the current (colored) point cloud and the current probability estimate for each of the points, if performing metric-semantic reconstruction
+#     #     """Returns the current (colored) point cloud and the current probability estimate for each of the points, if performing metric-semantic reconstruction
 
-    #     Returns:
-    #         open3d.cpu.pybind.t.geometry.PointCloud, np.array(N_points,n_labels) (or None)
-    #     """
-    #     pcd = self.vbg.extract_point_cloud()
-    #     pcd = pcd.to_legacy()
-    #     target_points = np.asarray(pcd.points)
-    #     if(self.semantic_integration):
-    #         labels,coords = get_properties(self.vbg,target_points,'encoded_vectors',res = self.res,voxel_size = self.voxel_size,device = self.device)
-    #         dlpack_tensor = labels.to_dlpack()
-    #         torch_labels = torch.utils.dlpack.from_dlpack(dlpack_tensor)
+#     #     Returns:
+#     #         open3d.cpu.pybind.t.geometry.PointCloud, np.array(N_points,n_labels) (or None)
+#     #     """
+#     #     pcd = self.vbg.extract_point_cloud()
+#     #     pcd = pcd.to_legacy()
+#     #     target_points = np.asarray(pcd.points)
+#     #     if(self.semantic_integration):
+#     #         labels,coords = get_properties(self.vbg,target_points,'encoded_vectors',res = self.res,voxel_size = self.voxel_size,device = self.device)
+#     #         dlpack_tensor = labels.to_dlpack()
+#     #         torch_labels = torch.utils.dlpack.from_dlpack(dlpack_tensor)
             
-    #         # Pass through decoder model
-    #         decoded_labels = encoder_model.decode(torch_labels)
+#     #         # Pass through decoder model
+#     #         decoded_labels = encoder_model.decode(torch_labels)
             
-    #         # Convert back to o3c.Tensor
-    #         decoded_labels_dlpack = torch.utils.dlpack.to_dlpack(decoded_labels)
-    #         labels = o3c.Tensor.from_dlpack(decoded_labels_dlpack)
+#     #         # Convert back to o3c.Tensor
+#     #         decoded_labels_dlpack = torch.utils.dlpack.to_dlpack(decoded_labels)
+#     #         labels = o3c.Tensor.from_dlpack(decoded_labels_dlpack)
 
-    #         if labels is not None:
-    #             if(return_raw_logits):
-    #                 return pcd,labels.cpu().numpy().astype(np.float64)
-    #             else:
-    #                 labels = labels.cpu().numpy().astype(np.float64)
-    #                 return pcd,labels
-    #         else:
-    #             return None,None
-    #     else:
-    #         return pcd,None
+#     #         if labels is not None:
+#     #             if(return_raw_logits):
+#     #                 return pcd,labels.cpu().numpy().astype(np.float64)
+#     #             else:
+#     #                 labels = labels.cpu().numpy().astype(np.float64)
+#     #                 return pcd,labels
+#     #         else:
+#     #             return None,None
+#     #     else:
+#     #         return pcd,None
 
-    def extract_point_cloud(self, return_raw_logits=False):
-        """Returns the current (colored) point cloud and the current probability estimate for each of the points,
-        if performing metric-semantic reconstruction.
+#     def extract_point_cloud(self, return_raw_logits=False):
+#         """Returns the current (colored) point cloud and the current probability estimate for each of the points,
+#         if performing metric-semantic reconstruction.
 
-        Args:
-            return_raw_logits (bool): Whether to return raw logits.
-            batch_size (int): Number of points to process in each batch.
+#         Args:
+#             return_raw_logits (bool): Whether to return raw logits.
+#             batch_size (int): Number of points to process in each batch.
 
-        Returns:
-            open3d.cpu.pybind.t.geometry.PointCloud, np.array(N_points, n_labels) (or None)
-        """
-        pcd = self.vbg.extract_point_cloud()
-        pcd = pcd.to_legacy()
-        target_points = np.asarray(pcd.points)
-        batch_size=1000
-        if self.semantic_integration:
-            # Prepare to store final labels
-            final_labels = []
+#         Returns:
+#             open3d.cpu.pybind.t.geometry.PointCloud, np.array(N_points, n_labels) (or None)
+#         """
+#         pcd = self.vbg.extract_point_cloud()
+#         pcd = pcd.to_legacy()
+#         target_points = np.asarray(pcd.points)
+#         batch_size=1000
+#         if self.semantic_integration:
+#             # Prepare to store final labels
+#             final_labels = []
             
-            # Process in batches
-            num_batches = (len(target_points) + batch_size - 1) // batch_size
+#             # Process in batches
+#             num_batches = (len(target_points) + batch_size - 1) // batch_size
             
-            for i in range(num_batches):
-                batch_points = target_points[i * batch_size : (i + 1) * batch_size]
-                labels, coords = get_properties(self.vbg, batch_points, 'encoded_vectors', 
-                                                res=self.res, voxel_size=self.voxel_size, 
-                                                device=self.device)
+#             for i in range(num_batches):
+#                 batch_points = target_points[i * batch_size : (i + 1) * batch_size]
+#                 labels, coords = get_properties(self.vbg, batch_points, 'encoded_vectors', 
+#                                                 res=self.res, voxel_size=self.voxel_size, 
+#                                                 device=self.device)
 
-                if labels is not None:
-                    dlpack_tensor = labels.to_dlpack()
-                    torch_labels = torch.utils.dlpack.from_dlpack(dlpack_tensor)
+#                 if labels is not None:
+#                     dlpack_tensor = labels.to_dlpack()
+#                     torch_labels = torch.utils.dlpack.from_dlpack(dlpack_tensor)
                     
-                    # Pass through decoder model
-                    with torch.no_grad(), torch.cuda.amp.autocast():
-                        decoded_labels = encoder_model.decode(torch_labels)
+#                     # Pass through decoder model
+#                     with torch.no_grad(), torch.cuda.amp.autocast():
+#                         decoded_labels = encoder_model.decode(torch_labels)
 
-                    # Take argmax to get top label
-                        top_labels = torch.argmax(decoded_labels, dim=1)
+#                     # Take argmax to get top label
+#                         top_labels = torch.argmax(decoded_labels, dim=1)
 
-                    final_labels.extend(top_labels.cpu().numpy().astype(np.float64))
+#                     final_labels.extend(top_labels.cpu().numpy().astype(np.float64))
                     
-                    # Clear cache
-                    del labels, torch_labels, decoded_labels
-                    torch.cuda.empty_cache()
+#                     # Clear cache
+#                     del labels, torch_labels, decoded_labels
+#                     torch.cuda.empty_cache()
 
-            # Convert final_labels to a numpy array
-            final_labels = np.array(final_labels)
+#             # Convert final_labels to a numpy array
+#             final_labels = np.array(final_labels)
             
-            if return_raw_logits:
-                return pcd, final_labels
-            else:
-                return pcd, final_labels
-        else:
-            return pcd, None
+#             if return_raw_logits:
+#                 return pcd, final_labels
+#             else:
+#                 return pcd, final_labels
+#         else:
+#             return pcd, None
 
