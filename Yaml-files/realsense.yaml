@@ -1,0 +1,46 @@
+# Camera configuration
+Camera:
+  name: "Intel RealSense D435"
+  setup: "monocular"
+  model: "perspective"
+  color_order: "RGB"
+
+  # Camera calibration and distortion parameters
+  fx: 608.196533203125
+  fy: 607.9978637695312
+  cx: 325.1812438964844
+  cy: 243.16873168945312
+
+  k1: 0.0
+  k2: 0.0
+  p1: 0.0
+  p2: 0.0
+  k3: 0.0
+
+  fps: 30.0
+  cols: 640
+  rows: 480
+
+# ORB feature parameters
+Feature:
+  max_num_keypoints: 2000
+  scale_factor: 1.2
+  num_levels: 8
+  ini_fast_threshold: 20
+  min_fast_threshold: 7
+
+
+Mapping:
+  voxel_size: 0.025
+  res: 8
+  n_labels: 150
+  depth_scale: 1000.0
+  depth_max: 5.0
+  miu: 0.001
+  truncation_vsize_multiple: 8
+
+
+
+SocketPublisher:
+  address: 127.0.0.1 # Ensure this matches the server IP
+  port: 5000         # Ensure this matches the server port
