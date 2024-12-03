@@ -63,13 +63,13 @@ class MyServer:
         #     config = yaml.safe_load(config_file)
 
         # Store values from the config into instance variables
-        self.voxel_size = config.get('voxel_size', 0.025)
-        self.trunc = self.voxel_size * config.get('truncation_vsize_multiple', 8)
-        self.res = config.get('res', 8)
-        self.n_labels = config.get('n_labels', 150)
-        self.depth_scale = config.get('depth_scale', 1000.0)
-        self.depth_max = config.get('depth_max', 5.0)
-        self.miu = config.get('miu', 0.001)
+        # self.voxel_size = config.get('voxel_size', 0.025)
+        # self.trunc = self.voxel_size * config.get('truncation_vsize_multiple', 8)
+        # self.res = config.get('res', 8)
+        # self.n_labels = config.get('n_labels', 150)
+        # self.depth_scale = config.get('depth_scale', 1000.0)
+        # self.depth_max = config.get('depth_max', 5.0)
+        # self.miu = config.get('miu', 0.001)
 
         yaml_file_path = '../Yaml-files/zed.yaml'
 
