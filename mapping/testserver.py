@@ -48,7 +48,7 @@ class MyServer:
         # Initialize queue and indices
         self.index_queue = 0
         self.index_reconstruction = 0
-        self.queue = queue.Queue(maxsize=1000)  # Thread-safe queue
+        self.queue = queue.Queue(maxsize=2000)  # Thread-safe queue
         self.load_config()
 
 
@@ -203,20 +203,20 @@ class MyServer:
             self.queue.task_done()
 
 
-    def fill_queue(self):
-        while self.task_running:
-            # Get a data packet from the dataset
-            data_dict = self.my_ds[self.index_queue]  # Access dataset by index
-            with self.queue_empty:
-                if not self.pause_mapping and not self.queue.full():
-                    self.queue.put(data_dict)
-                    self.queue_empty.notify()
+    # def fill_queue(self):
+    #     while self.task_running:
+    #         # Get a data packet from the dataset
+    #         data_dict = self.my_ds[self.index_queue]  # Access dataset by index
+    #         with self.queue_empty:
+    #             if not self.pause_mapping and not self.queue.full():
+    #                 self.queue.put(data_dict)
+    #                 self.queue_empty.notify()
                 
-            self.index_queue += 1
-            time.sleep(0.5)
-            # waiting for mapping to catchup
-            if self.index_queue % 100 == 50:
-                print(f"Added frame {self.index_queue} to the queue.")
+    #         self.index_queue += 1
+    #         time.sleep(0.5)
+    #         # waiting for mapping to catchup
+    #         if self.index_queue % 100 == 50:
+    #             print(f"Added frame {self.index_queue} to the queue.")
 
     def fill_queue_from_socket(self):
         # host, port = 'localhost', 5003
@@ -320,8 +320,8 @@ class MyServer:
                     print(f"Pose data size mismatch. Expected 16 elements, got {pose_array.size}")
                     continue
                 pose_matrix = pose_array.reshape((4, 4))
-                # print("Pose Matrix:")
-                # print(pose_matrix)
+                print("Pose Matrix:")
+                print(pose_matrix)
                 if pose_matrix[3,3] == 0:
                     print(f"Invalid Pose! Skipping frame")
                     continue
@@ -353,19 +353,31 @@ class MyServer:
             print("Disconnected from server")
                 
 
-    def get_map(self):
-        # self.pause_task()  # Pause mapping to avoid concurrent writes
-        # print("here")
+        def get_semantic_map(self, map_type="pcd"):
+            time_b = time.time()
+            with self.vbg_access_lock:
+                if self.rec is not None:
+                    print("here")
+                    pcd, labels = self.rec.extract_point_cloud(return_raw_logits=False)
+                    points = np.asarray(pcd.points).tolist()
+                    labels = labels.tolist()
+                    print(len(points))
+                    result = {'points': points, 'labels': labels}
+                else:
+                    result = "Reconstruction object is not initialized"
+            time_e = time.time()
+            print(time_e - time_b)
+            return result
+
+    def get_metric_map(self, map_type="pcd"):
         with self.vbg_access_lock:
-            # print("here2")
             if self.rec is not None:
-                pcd, labels = self.rec.extract_point_cloud(return_raw_logits=False)
+                pcd, colors = self.rec.extract_point_cloud_wcolor(return_raw_logits=False)
                 points = np.asarray(pcd.points).tolist()
-                labels = labels.tolist()
-                result = {'points': points, 'labels': labels}
+                colors = colors.tolist()
+                result = {'points': points, 'colors': colors}
             else:
                 result = "Reconstruction object is not initialized"
-        # self.resume_task()  # Resume mapping after safe access
         return result
 
 
