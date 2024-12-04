@@ -148,21 +148,24 @@ class Reconstruction:
         self.semantic_integration = self.n_labels is not None
         self.miu = miu
         self.trunc = self.voxel_size * trunc_multiplier
-        self.initialize_vbg()
+        try:
+            self.initialize_vbg()
+        except Exception as e:
+            print(e)
         self.rays = None
         self.torch_device = torch.device('cuda')
-        self.arr_des = '/home/motion/semanticmapping/visuals/arrays/280b83fcf3/cacherelease'
+        # self.arr_des = '/home/motion/semanticmapping/visuals/arrays/280b83fcf3/cacherelease'
         # # plot_dir = os.path.join(des, 'topk')
-        self.arr_dir = os.path.join(self.arr_des, f'reconstruction')
+        # self.arr_dir = os.path.join(self.arr_des, f'reconstruction')
         # arr_dir = os.path.join(arr_des, f'scannetpp_Segformer_150_topk1')
         # # if not os.path.exists(plot_dir):
         # #     os.makedirs(plot_dir)
-        if not os.path.exists(self.arr_dir):
-            os.makedirs(self.arr_dir)
-        self.block_count = []
-        self.total_blocks = []
-        self.hashmap_size = []
-        self.gpu_memory_usage = []
+        # if not os.path.exists(self.arr_dir):
+        #     os.makedirs(self.arr_dir)
+        # self.block_count = []
+        # self.total_blocks = []
+        # self.hashmap_size = []
+        # self.gpu_memory_usage = []
 
 
 

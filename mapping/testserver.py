@@ -8,6 +8,7 @@ import sys
 import open3d as o3d
 import open3d.core as o3c
 import yaml
+import socket
 
 
 # parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -175,7 +176,7 @@ class MyServer:
 
 
     def mapping(self):
-        while self.task_running and not self.pause_integration and (self.index_reconstruction < self.total_len):
+        while self.task_running and not self.pause_integration:
             # print("Checking queue...")  # Added for debugging
             with self.queue_empty:
                 while self.queue.empty():
@@ -203,7 +204,7 @@ class MyServer:
 
 
     def fill_queue(self):
-        while self.task_running and (self.index_queue < self.total_len):
+        while self.task_running:
             # Get a data packet from the dataset
             data_dict = self.my_ds[self.index_queue]  # Access dataset by index
             with self.queue_empty:
@@ -286,6 +287,7 @@ class MyServer:
 
                 # Step 5: Receive the pose data (128 bytes)
                 pose_data = b''
+                POSE_SIZE = 128
                 while len(pose_data) < POSE_SIZE:
                     packet = conn.recv(POSE_SIZE - len(pose_data))
                     if not packet:
@@ -347,7 +349,7 @@ class MyServer:
         except Exception as e:
             print(f"Error in socket client: {e}")
         finally:
-            client_socket.close()
+            server_socket.close()
             print("Disconnected from server")
                 
 
