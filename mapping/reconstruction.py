@@ -125,7 +125,7 @@ def get_indices_from_points(voxel_grid,points,res = 8,voxel_size = 0.025,device 
 
 class Reconstruction:
 
-    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CUDA:0'),miu = 0.001):
+    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CPU:0'),miu = 0.001):
         """Initializes the TSDF reconstruction pipeline using voxel block grids, ideally using a GPU device for efficiency. 
 
         Args:
