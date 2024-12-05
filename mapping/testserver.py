@@ -25,10 +25,11 @@ class MyServer:
         self.server.register_introspection_functions()
         self.server.register_function(self.start_task)
         self.server.register_function(self.stop_task)
-        self.server.register_function(self.get_map)
+        self.server.register_function(self.get_semantic_map)
         self.server.register_function(self.pause_task)
         self.server.register_function(self.resume_task)
         self.server.register_function(self.get_map_stop_task)
+        self.server.register_function(self.get_metric_map)
 
         self.task_thread = None
         self.queue_thread = None
@@ -353,21 +354,21 @@ class MyServer:
             print("Disconnected from server")
                 
 
-        def get_semantic_map(self, map_type="pcd"):
-            time_b = time.time()
-            with self.vbg_access_lock:
-                if self.rec is not None:
-                    print("here")
-                    pcd, labels = self.rec.extract_point_cloud(return_raw_logits=False)
-                    points = np.asarray(pcd.points).tolist()
-                    labels = labels.tolist()
-                    print(len(points))
-                    result = {'points': points, 'labels': labels}
-                else:
-                    result = "Reconstruction object is not initialized"
-            time_e = time.time()
-            print(time_e - time_b)
-            return result
+    def get_semantic_map(self, map_type="pcd"):
+        time_b = time.time()
+        with self.vbg_access_lock:
+            if self.rec is not None:
+                print("here")
+                pcd, labels = self.rec.extract_point_cloud(return_raw_logits=False)
+                points = np.asarray(pcd.points).tolist()
+                labels = labels.tolist()
+                print(len(points))
+                result = {'points': points, 'labels': labels}
+            else:
+                result = "Reconstruction object is not initialized"
+        time_e = time.time()
+        print(time_e - time_b)
+        return result
 
     def get_metric_map(self, map_type="pcd"):
         with self.vbg_access_lock:
