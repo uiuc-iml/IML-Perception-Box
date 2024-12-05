@@ -224,10 +224,10 @@ class Reconstruction:
 
         # Find buf indices in the underlying engine
         buf_indices, masks = self.vbg.hashmap().find(frustum_block_coords)
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
         voxel_coords, voxel_indices = self.vbg.voxel_coordinates_and_flattened_indices(
             buf_indices)
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
 
         # Now project them to the depth and find association
         # (3, N) -> (2, N)
@@ -239,7 +239,7 @@ class Reconstruction:
         d = uvd[2]
         u = (uvd[0] / d).round().to(o3c.int64)
         v = (uvd[1] / d).round().to(o3c.int64)
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
         mask_proj = (d > 0) & (u >= 0) & (v >= 0) & (u < depth.columns) & (
             v < depth.rows)
 
@@ -256,7 +256,7 @@ class Reconstruction:
 
         sdf[sdf >= self.trunc] = self.trunc
         sdf = sdf / self.trunc
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
 
         weight = self.vbg.attribute('weight').reshape((-1, 1))
         tsdf = self.vbg.attribute('tsdf').reshape((-1, 1))
@@ -273,7 +273,7 @@ class Reconstruction:
         # gpu_memory_usage_np = np.array(self.gpu_memory_usage)
         # np.save(os.path.join(self.arr_dir, "gpu_memory_usage.npy"), gpu_memory_usage_np)
         
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
 
         if(self.integrate_color):
 
@@ -281,9 +281,9 @@ class Reconstruction:
         if(self.semantic_integration):
             self.update_semantics(semantic_label,v_proj,u_proj,valid_voxel_indices,mask_inlier,weight, scene)
         weight[valid_voxel_indices] = wp
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
 
-        o3d.core.cuda.release_cache()
+        # o3d.core.cuda.release_cache()
 
         
 
@@ -296,7 +296,7 @@ class Reconstruction:
         color[valid_voxel_indices] \
                 = (color[valid_voxel_indices] * w +
                             color_readings[mask_inlier]) / (wp)
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
         
     def update_semantics(self,semantic_label,v_proj,u_proj,valid_voxel_indices,mask_inlier,weight, scene=None):
         # performing semantic integration
@@ -405,10 +405,10 @@ class Reconstruction:
         semantic[valid_voxel_indices] += semantic_readings[mask_inlier]
 
         # Synchronize GPU tasks to ensure memory is released properly
-        o3d.core.cuda.synchronize()
+        # o3d.core.cuda.synchronize()
 
-        # Release unused GPU memory
-        o3d.core.cuda.release_cache()
+        # # Release unused GPU memory
+        # o3d.core.cuda.release_cache()
 
 
 
