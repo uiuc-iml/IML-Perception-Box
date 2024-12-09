@@ -1,12 +1,12 @@
 Camera:
   color_order: RGB
-  cols: 1280
-  cx: 645.2424926757812
-  cy: 369.2352600097656
-  fps: 60.0
-  fx: 523.0582275390625
-  fy: 523.0582275390625
-  h_fov: 101.48621368408203
+  cols: 2208
+  cx: 1114.3642578125
+  cy: 638.8798828125
+  fps: 15.0
+  fx: 1046.569580078125
+  fy: 1046.569580078125
+  h_fov: 93.0621566772461
   k1: 0.0
   k2: 0.0
   k3: 0.0
@@ -14,43 +14,17 @@ Camera:
   name: ZED2
   p1: 0.0
   p2: 0.0
-  rows: 720
-  setup: stereo
+  rows: 1242
+  setup: monocular
   stereo_baseline: 119.90037536621094
-Feature:
-  ini_fast_threshold: 20
-  max_num_keypoints: 2000
-  min_fast_threshold: 7
-  name: default ORB feature extraction setting
-  num_levels: 8
-  scale_factor: 1.2
-Initializer:
-  min_num_triangulated_pts: 100
-KeyframeInserter:
-  wait_for_local_bundle_adjustment: false
-LoopDetector:
-  backend: g2o
 Mapping:
-  backend: g2o
-  baseline_dist_thr: 0.11007784219
-  erase_temporal_keyframes: false
-  num_temporal_keyframes: 15
-  redundant_obs_ratio_thr: 0.9
-PangolinViewer:
-  camera_line_width: 3
-  camera_size: 0.08
-  graph_line_width: 1
-  keyframe_line_width: 1
-  keyframe_size: 0.07
-  point_size: 2
-  viewpoint_f: 400
-  viewpoint_x: 0
-  viewpoint_y: -0.65
-  viewpoint_z: -1.9
-Preprocessing:
-  min_size: 800
-Relocalizer:
-  search_neighbor: true
+  depth_max: 5.0
+  depth_scale: 1000.0
+  miu: 0.001
+  n_labels: 150
+  res: 8
+  truncation_vsize_multiple: 8
+  voxel_size: 0.025
 SocketPublisher:
   address: 127.0.0.1
   port: 7000
@@ -68,22 +42,22 @@ StereoRectifier:
   - 0.0
   - 0.0
   K_left:
-  - 523.0582275390625
+  - 523.0937
   - 0.0
-  - 645.2424926757812
+  - 645.242
   - 0.0
-  - 523.0582275390625
-  - 369.2352600097656
+  - 523.0937
+  - 369.2362
   - 0.0
   - 0.0
   - 1.0
   K_right:
-  - 523.0582275390625
+  - 523.0937
   - 0.0
-  - 645.2424926757812
+  - 645.242
   - 0.0
-  - 523.0582275390625
-  - 369.2352600097656
+  - 523.0937
+  - 369.2362
   - 0.0
   - 0.0
   - 1.0
@@ -112,14 +86,6 @@ StereoRectifier:
   - 0.0
   - 0.0
   T_right:
-  - 119.90037536621094
+  - 119.9004
   - 0.0
   - 0.0
-System:
-  map_format: msgpack
-  num_grid_cols: 47
-  num_grid_rows: 30
-Tracking:
-  backend: g2o
-  enable_temporal_keyframe_only_tracking: false
-  margin_last_frame_projection: 10.0
