@@ -17,7 +17,7 @@
 #### Ver 2
   - [Bash Script Installation](#Bash-Installation)
 ---
-
+- [Create Config File](#configurator)
 - [Usage](#Run-Perception-Box)
 
 
@@ -226,6 +226,26 @@ git clone "https://github.com/uiuc-iml/Perception-Box.git"
 chmod +x install_stella_vslam.sh
 ./install_stella_vslam.sh
 ```
+### Configurator
+In python helpers, there is a configurator for the zed and realsense camera - 
+Usage
+
+    Run the Flask App
+
+python app.py
+
+Access the Web App Open your browser and go to http://127.0.0.1:5000.
+
+Configure Camera Settings
+
+    Select the camera type (ZED or RealSense).
+    Choose resolution, frame rate, and other camera options.
+    Set the socket address and port.
+
+Generate YAML
+
+    Click the Generate YAML button.
+    Download the generated camera_config.yaml file.
 ### Install requirements for the mapping module
 
 ```
