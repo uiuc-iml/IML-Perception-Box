@@ -43,4 +43,4 @@ Mapping:
 
 SocketPublisher:
   address: 127.0.0.1 # Ensure this matches the server IP
-  port: 5000         # Ensure this matches the server port
+  port: 7000         # Ensure this matches the server port
