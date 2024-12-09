@@ -125,7 +125,7 @@ class MyServer:
                 res=self.res,
                 voxel_size=self.voxel_size,
                 n_labels=self.n_labels,
-                integrate_color=False,
+                integrate_color=True,
             )
             self.task_thread = threading.Thread(target=self.mapping, daemon=True)
             self.queue_thread = threading.Thread(target=self.fill_queue_from_socket, daemon=True)
@@ -369,14 +369,15 @@ class MyServer:
             print("Disconnected from server")
                 
 
-    def get_semantic_map(self, map_type="pcd"):
+    def get_semantic_map(self, map_type="pcd", top_label=True):
         time_b = time.time()
         with self.vbg_access_lock:
             if self.rec is not None:
                 print("here")
                 pcd, labels = self.rec.extract_point_cloud(return_raw_logits=False)
                 points = np.asarray(pcd.points).tolist()
-                labels = np.argmax(labels, axis=1)
+                if top_label:
+                    labels = np.argmax(labels, axis=1)
                 labels = labels.tolist()
                 print(len(points))
                 result = {'points': points, 'labels': labels}
