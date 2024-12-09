@@ -226,6 +226,22 @@ git clone "https://github.com/uiuc-iml/Perception-Box.git"
 chmod +x install_stella_vslam.sh
 ./install_stella_vslam.sh
 ```
+### Install requirements for the mapping module
+
+```
+cd Perception-Box
+pip install -r requirements.txt
+```
+
+### Run Mapping
+On the client device, create an XML-RPC client using the perception box's local network IP. Enter the mapping directory of the Perception-Box folder and run the mapping server on the perception box:
+```
+python testserver.py
+```
+Next, run the perception box using the bash script given below. Then, use the available APIs to start, pause, and end mapping from the client side. Use the get_metric_map and get_semantic_map APIs to get the map over the 
+XML-RPC interface. Look at the documentation {link for API documentation} for more information. See example_client.py for inspiration.
+Note: Be sure to change the IP to your perception box's IP.
+
 ### Run Perception Box
 Example:
 ```bash
