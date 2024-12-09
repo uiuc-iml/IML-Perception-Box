@@ -269,6 +269,10 @@ Example:
 ```
 Note: Adjust the paths based on the local configuration of your system
 
+### Example sequence of commands
+First run the mapping box (We could make a bash script that does this on start everytime). Then, use the above bash script to start SLAM (We could make it so that it executes on start_task()). Then, call start_mapping() to start
+mapping (from the client). Finally, use the APIs to get maps and call stop_mapping() and stop_task() when finished.
+
 
 
 
