@@ -56,23 +56,23 @@ set(EXECUTABLE_TARGETS "")
 add_executable(run_camera_slam src/run_camera_slam.cc)
 list(APPEND EXECUTABLE_TARGETS run_camera_slam)
 
-add_executable(run_image_slam src/run_image_slam.cc src/util/image_util.cc)
-list(APPEND EXECUTABLE_TARGETS run_image_slam)
+# --- add_executable(run_image_slam src/run_image_slam.cc src/util/image_util.cc)
+# --- list(APPEND EXECUTABLE_TARGETS run_image_slam)
 
-add_executable(run_video_slam src/run_video_slam.cc)
-list(APPEND EXECUTABLE_TARGETS run_video_slam)
+# --- add_executable(run_video_slam src/run_video_slam.cc)
+# --- list(APPEND EXECUTABLE_TARGETS run_video_slam)
 
-add_executable(run_euroc_slam src/run_euroc_slam.cc src/util/euroc_util.cc)
-list(APPEND EXECUTABLE_TARGETS run_euroc_slam)
+# --- add_executable(run_euroc_slam src/run_euroc_slam.cc src/util/euroc_util.cc)
+# --- list(APPEND EXECUTABLE_TARGETS run_euroc_slam)
 
-add_executable(run_kitti_slam src/run_kitti_slam.cc src/util/kitti_util.cc)
-list(APPEND EXECUTABLE_TARGETS run_kitti_slam)
+# --- add_executable(run_kitti_slam src/run_kitti_slam.cc src/util/kitti_util.cc)
+# --- list(APPEND EXECUTABLE_TARGETS run_kitti_slam)
 
-add_executable(run_tum_rgbd_slam src/run_tum_rgbd_slam.cc src/util/tum_rgbd_util.cc)
-list(APPEND EXECUTABLE_TARGETS run_tum_rgbd_slam)
+# --- add_executable(run_tum_rgbd_slam src/run_tum_rgbd_slam.cc src/util/tum_rgbd_util.cc)
+# --- list(APPEND EXECUTABLE_TARGETS run_tum_rgbd_slam)
 
-add_executable(run_loop_closure src/run_loop_closure.cc)
-list(APPEND EXECUTABLE_TARGETS run_loop_closure)
+# --- add_executable(run_loop_closure src/run_loop_closure.cc)
+# --- list(APPEND EXECUTABLE_TARGETS run_loop_closure)
 
 foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
 

@@ -89,7 +89,7 @@ D_right = [k1_right, k2_right, p1_right, p2_right, k3_right]
 data = {
     'Camera': {
         'name': 'ZED2',
-        'setup': 'stereo',  # Assuming stereo setup
+        'setup': 'monocular',  # Assuming stereo setup
         'model': 'perspective',
         'color_order': 'RGB',
         'cols': cols,
@@ -131,47 +131,6 @@ data = {
         'num_levels': 8,
         'ini_fast_threshold': 20,
         'min_fast_threshold': 7
-    },
-    'Mapping': {
-        'backend': 'g2o',
-        'baseline_dist_thr': 0.11007784219,
-        'redundant_obs_ratio_thr': 0.9,
-        'erase_temporal_keyframes': False,
-        'num_temporal_keyframes': 15
-    },
-    'Tracking': {
-        'backend': 'g2o',
-        'enable_temporal_keyframe_only_tracking': False,
-        'margin_last_frame_projection': 10.0
-    },
-    'KeyframeInserter': {
-        'wait_for_local_bundle_adjustment': False
-    },
-    'Relocalizer': {
-        'search_neighbor': True
-    },
-    'LoopDetector': {
-        'backend': 'g2o'
-    },
-    'Initializer': {
-        'min_num_triangulated_pts': 100
-    },
-    'System': {
-        'map_format': 'msgpack',
-        'num_grid_cols': 47,
-        'num_grid_rows': 30
-    },
-    'PangolinViewer': {
-        'keyframe_size': 0.07,
-        'keyframe_line_width': 1,
-        'graph_line_width': 1,
-        'point_size': 2,
-        'camera_size': 0.08,
-        'camera_line_width': 3,
-        'viewpoint_x': 0,
-        'viewpoint_y': -0.65,
-        'viewpoint_z': -1.9,
-        'viewpoint_f': 400
     }
 }
 

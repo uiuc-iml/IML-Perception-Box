@@ -1373,7 +1373,7 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
                 } else {
                     // Send identity matrix if no pose is available
                     std::fill(std::begin(pose_array), std::end(pose_array), 0.0);
-                    pose_array[0] = pose_array[5] = pose_array[10] = pose_array[15] = 1.0;
+                    // pose_array[0] = pose_array[5] = pose_array[10] = pose_array[15] = 1.0;
                 }
 
                 // Send pose data
@@ -2332,7 +2332,7 @@ int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::syste
                 } else {
                     // Send identity matrix or zeros if no pose is available
                     std::fill(pose_data, pose_data + 16, 0.0);
-                    pose_data[0] = pose_data[5] = pose_data[10] = pose_data[15] = 1.0; // Identity matrix
+                    //pose_data[0] = pose_data[5] = pose_data[10] = pose_data[15] = 1.0; // Identity matrix
                 }
                 send(sock, pose_data, sizeof(pose_data), 0);
             }
