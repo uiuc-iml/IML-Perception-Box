@@ -231,9 +231,7 @@ In python helpers, there is a configurator for the zed and realsense camera -
 Usage
 
     Run the Flask App
-
-python app.py
-
+    
 Access the Web App Open your browser and go to http://127.0.0.1:5000.
 
 Configure Camera Settings
