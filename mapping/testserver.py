@@ -409,7 +409,8 @@ class MyServer:
             depth,
             intrinsics,
             pose,
-            semantic_label=semantic_label
+            semantic_label=semantic_label,
+            color=rgb
         )
 
     def serve_forever(self):

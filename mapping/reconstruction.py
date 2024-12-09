@@ -442,6 +442,32 @@ class Reconstruction:
                 return None,None
         else:
             return pcd,None
+        
+    def extract_point_cloud_wcolor(self,return_raw_logits = False):
+
+        """Returns the current (colored) point cloud and the current probability estimate for each of the points, if performing metric-semantic reconstruction
+
+        Returns:
+            open3d.cpu.pybind.t.geometry.PointCloud, np.array(N_points,n_labels) (or None)
+        """
+        pcd = self.vbg.extract_point_cloud()
+        pcd = pcd.to_legacy()
+        sm = nn.Softmax(dim = 1)
+        target_points = np.asarray(pcd.points)
+        if(self.semantic_integration):
+            colors,coords = get_properties(self.vbg,target_points,'color',res = self.res,voxel_size = self.voxel_size,device = self.device)
+            colors = colors.cpu().numpy().astype(np.float64)
+            if colors is not None:
+                if(return_raw_logits):
+                    return pcd,colors
+                else:
+                    colors = colors
+                    colors = sm(torch.from_numpy(colors)).numpy()
+                    return pcd,colors
+            else:
+                return None,None
+        else:
+            return pcd,None
 
     def extract_triangle_mesh(self):
         """Returns the current (colored) mesh and the current probability for each class estimate for each of the vertices, if performing metric-semantic reconstruction
