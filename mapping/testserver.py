@@ -9,6 +9,8 @@ import open3d as o3d
 import open3d.core as o3c
 import yaml
 import socket
+import struct
+import cv2
 
 
 # parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -73,13 +75,14 @@ class MyServer:
         # self.depth_max = config.get('depth_max', 5.0)
         # self.miu = config.get('miu', 0.001)
 
-        yaml_file_path = '../Yaml-files/zed.yaml'
+        yaml_file_path = 'Yaml-files/zed.yaml'
 
         # Read the camera YAML file
         with open(yaml_file_path, 'r') as file:
             config = yaml.safe_load(file)
 
         # Extract the camera parameters
+        self.name = config['Camera']['name']
         fx = config['Camera']['fx']
         fy = config['Camera']['fy']
         cx = config['Camera']['cx']
@@ -301,14 +304,22 @@ class MyServer:
 
                 # Step 6: Decode the images
                 # Decode color image
-                color_frame = (np.frombuffer(color_image_data, dtype=np.uint8))
+                color_frame = cv2.imdecode(np.frombuffer(color_image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
                 if color_frame is None:
                     print("Failed to decode color image")
                     continue
 
                 # Decode depth image if available
                 if depth_img_size > 0:
-                    depth_frame = (np.frombuffer(depth_image_data, dtype=np.uint8))
+                    
+                    if(self.name == "ZED2"):
+                        print("ZED2")
+                        depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                    else:
+                        depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                        scaling_factor = 256  # Adjust based on the sender's scaling logic
+                        depth_frame = (depth_frame.astype(np.uint16)) * scaling_factor
+                    
                     if depth_frame is None:
                         print("Failed to decode depth image")
                         continue
@@ -326,13 +337,17 @@ class MyServer:
                 if pose_matrix[3,3] == 0:
                     print(f"Invalid Pose! Skipping frame")
                     continue
+                
 
                 # Step 8: Display the frames
-                # cv2.imshow("Color Frame", color_frame)
-                # if depth_frame is not None:
-                #     cv2.imshow("Depth Frame", depth_frame)
+                cv2.imshow("Color Frame", color_frame)
+                if depth_frame is not None:
+                    cv2.imshow("Depth Frame", depth_frame)
                 intrinsics = self.K
-
+                print("Intrensic Matrix:")
+                print(intrinsics)
+                print(type(color_frame))
+                print(type(depth_frame))
                 data_dict = {
                 'color': color_frame,
                 'depth': depth_frame,
@@ -361,6 +376,7 @@ class MyServer:
                 print("here")
                 pcd, labels = self.rec.extract_point_cloud(return_raw_logits=False)
                 points = np.asarray(pcd.points).tolist()
+                labels = np.argmax(labels, axis=1)
                 labels = labels.tolist()
                 print(len(points))
                 result = {'points': points, 'labels': labels}
@@ -387,6 +403,7 @@ class MyServer:
         semantic_label = self.segmenter.get_pred_probs(
             rgb, depth, x=depth.shape[0], y=depth.shape[1]
         )
+        print(pose)
         self.rec.update_vbg(
             depth,
             intrinsics,

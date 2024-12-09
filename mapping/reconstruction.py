@@ -398,7 +398,7 @@ class Reconstruction:
         # Initialize unobserved voxels with uniform prior directly on GPU
         zero_weight_mask = weight[valid_voxel_indices].flatten() == 0
         if zero_weight_mask.any():
-            uniform_prior = torch.log(torch.tensor([1.0 / self.n_labels], dtype=torch.float32, device='cuda'))
+            uniform_prior = torch.log(torch.tensor([1.0 / self.n_labels], dtype=torch.float32, device='cpu'))
             semantic[valid_voxel_indices[zero_weight_mask]] += o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(uniform_prior))
 
         # Bayesian update directly in log space on the GPU
@@ -421,7 +421,10 @@ class Reconstruction:
         Returns:
             open3d.cpu.pybind.t.geometry.PointCloud, np.array(N_points,n_labels) (or None)
         """
-        pcd = self.vbg.extract_point_cloud()
+        try:
+            pcd = self.vbg.extract_point_cloud()
+        except Exception as e:  
+            print(e)
         pcd = pcd.to_legacy()
         sm = nn.Softmax(dim = 1)
         target_points = np.asarray(pcd.points)
