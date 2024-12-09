@@ -75,7 +75,7 @@ class MyServer:
         # self.depth_max = config.get('depth_max', 5.0)
         # self.miu = config.get('miu', 0.001)
 
-        yaml_file_path = 'Yaml-files/zed.yaml'
+        yaml_file_path = 'Yaml-files/realsense.yaml'
 
         # Read the camera YAML file
         with open(yaml_file_path, 'r') as file:
