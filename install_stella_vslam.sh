@@ -16,6 +16,9 @@ PANGOLIN_CHECKOUT="eab3d3449a33a042b1ee7225e1b8b593b1b21e3e"
 STELLA_VSLAM_REPO="https://github.com/stella-cv/stella_vslam.git"
 PANGOLIN_VIEWER_REPO="https://github.com/stella-cv/pangolin_viewer.git"
 #PERCEPTION_BOX_REPO="https://github.com/uiuc-iml/Perception-Box.git"
+ZED_SDK_REPO="https://download.stereolabs.com/zedsdk/4.0/jp54/jetsons"
+REALSENSE_REPO="https://github.com/IntelRealSense/librealsense.git"
+
 
 # Function to install system dependencies
 install_dependencies() {
@@ -190,6 +193,31 @@ build_perception_box() {
     sudo make install
 }
 
+
+
+# Install Intel RealSense SDK
+install_realsense() {
+    echo "Installing Intel RealSense SDK..."
+    cd ~/Downloads
+    git clone ${REALSENSE_REPO}
+    cd librealsense
+    mkdir build && cd build
+    cmake ../ -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_EXAMPLES=false \
+              -DFORCE_RSUSB_BACKEND=true
+    make -j$(nproc)
+    sudo make install
+}
+
+# Install ZED SDK
+install_zed() {
+    echo "Installing ZED SDK..."
+    cd ~/Downloads
+    wget ${ZED_SDK_REPO}/ZED_SDK_Linux_JP54_v4.0.8.run
+    chmod +x ZED_SDK_Linux_JP54_v4.0.8.run
+    ./ZED_SDK_Linux_JP54_v4.0.8.run -- silent
+}
+
 # Main execution flow
 main() {
     echo "Starting installation process..."
@@ -212,10 +240,22 @@ main() {
     install_pangolin
     build_stella_vslam
     build_pangolin_viewer
+    read -p "Install Intel RealSense SDK? (y/n) [y]: " install_rs
+    install_rs=${install_rs:-y}
+    if [[ "$install_rs" =~ ^[Yy]$ ]]; then
+        install_realsense
+    fi
+
+    read -p "Install ZED SDK? (y/n) [y]: " install_zed
+    install_zed=${install_zed:-y}
+    if [[ "$install_zed" =~ ^[Yy]$ ]]; then
+        install_zed
+    fi
     build_perception_box
 
     echo "Installation and setup completed successfully!"
 }
+
 
 # Run the main function
 main
