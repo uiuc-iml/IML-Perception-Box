@@ -158,6 +158,11 @@ int mono_tracking(const std::shared_ptr<stella_vslam::system>& slam,
             }
 
             is_not_end = video.read(frame);
+            double ms_since_start = video.get(cv::CAP_PROP_POS_MSEC);
+
+            if (ms_since_start > 0) {
+              timestamp = start_timestamp + (ms_since_start / 1000);
+            }
 
             const auto tp_1 = std::chrono::steady_clock::now();
 
@@ -180,8 +185,7 @@ int mono_tracking(const std::shared_ptr<stella_vslam::system>& slam,
                     std::this_thread::sleep_for(std::chrono::microseconds(static_cast<unsigned int>(wait_time * 1e6)));
                 }
             }
-
-            timestamp += 1.0 / slam->get_camera()->fps_;
+            
             ++num_frame;
 
 #ifdef HAVE_IRIDESCENCE_VIEWER
@@ -284,6 +288,7 @@ int main(int argc, char* argv[]) {
     popl::OptionParser op("Allowed options");
     auto help = op.add<popl::Switch>("h", "help", "produce help message");
     auto vocab_file_path = op.add<popl::Value<std::string>>("v", "vocab", "vocabulary file path");
+    auto without_vocab = op.add<popl::Switch>("", "without-vocab", "run without vocabulary file");
     auto video_file_path = op.add<popl::Value<std::string>>("m", "video", "video file path");
     auto config_file_path = op.add<popl::Value<std::string>>("c", "config", "config file path");
     auto mask_img_path = op.add<popl::Value<std::string>>("", "mask", "mask image path", "");
@@ -322,7 +327,8 @@ int main(int argc, char* argv[]) {
         std::cerr << op << std::endl;
         return EXIT_FAILURE;
     }
-    if (!vocab_file_path->is_set() || !video_file_path->is_set() || !config_file_path->is_set()) {
+    if ((!vocab_file_path->is_set() && !without_vocab->is_set())
+        || !video_file_path->is_set() || !config_file_path->is_set()) {
         std::cerr << "invalid arguments" << std::endl;
         std::cerr << std::endl;
         std::cerr << op << std::endl;
@@ -412,7 +418,8 @@ int main(int argc, char* argv[]) {
     }
 
     // build a slam system
-    auto slam = std::make_shared<stella_vslam::system>(cfg, vocab_file_path->value());
+    std::string vocab_file_path_str = (without_vocab->is_set()) ? "" : vocab_file_path->value();
+    auto slam = std::make_shared<stella_vslam::system>(cfg, vocab_file_path_str);
     bool need_initialize = true;
     if (map_db_path_in->is_set()) {
         need_initialize = false;
