@@ -219,6 +219,8 @@ cmake ..
 ```
 Download the Vocab file from: [Vocab file](https://drive.google.com/file/d/158_S22qdE8fUNCVYpWLcF2e-X8t7DLLH/view?usp=sharing)
 
+Open3D: [Jetson fork](https://github.com/henryrobbins/Open3D.git)
+
 ### Bash Installation
 ```bash
 cd ~/Downloads
