@@ -10,6 +10,33 @@ find_package(realsense2 REQUIRED)
 
 # ZED SDK
 find_package(ZED 3 REQUIRED)
+set(ZED_SDK_ROOT_DIR "/usr/local/zed")
+find_package(ZED REQUIRED)
+include_directories(${ZED_INCLUDE_DIRS})
+link_directories(${ZED_LIBRARY_DIRS})
+
+
+# Find CUDA
+find_package(CUDA REQUIRED)
+
+# Add CUDA include and library directories
+include_directories(${CUDA_INCLUDE_DIRS})
+link_directories(${CUDA_LIBRARY_DIRS})
+
+# Print CUDA paths for debugging
+message(STATUS "CUDA found at: ${CUDA_TOOLKIT_ROOT_DIR}")
+message(STATUS "CUDA include directories: ${CUDA_INCLUDE_DIRS}")
+message(STATUS "CUDA library directories: ${CUDA_LIBRARY_DIRS}")
+message(STATUS "CUDA version: ${CUDA_VERSION}")
+
+# Add CUDA compilation flags (optional, useful for specific versions)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++14)
+
+# Enable CUDA for all executables
+foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
+    target_include_directories(${EXECUTABLE_TARGET} PRIVATE ${CUDA_INCLUDE_DIRS})
+    target_link_libraries(${EXECUTABLE_TARGET} PRIVATE ${CUDA_LIBRARIES})
+endforeach()
 
 # filesystem
 set(filesystem_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/filesystem/include)
@@ -55,6 +82,9 @@ set(EXECUTABLE_TARGETS "")
 
 add_executable(run_camera_slam src/run_camera_slam.cc)
 list(APPEND EXECUTABLE_TARGETS run_camera_slam)
+
+add_executable(imu src/imu.cc)
+list(APPEND EXECUTABLE_TARGETS imu)
 
 # --- add_executable(run_image_slam src/run_image_slam.cc src/util/image_util.cc)
 # --- list(APPEND EXECUTABLE_TARGETS run_image_slam)
