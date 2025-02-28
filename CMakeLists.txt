@@ -22,6 +22,8 @@ find_package(CUDA REQUIRED)
 # Add CUDA include and library directories
 include_directories(${CUDA_INCLUDE_DIRS})
 link_directories(${CUDA_LIBRARY_DIRS})
+include_directories(/usr/local/cuda-12.6/include)
+link_directories(/usr/local/cuda-12.6/lib64)
 
 # Print CUDA paths for debugging
 message(STATUS "CUDA found at: ${CUDA_TOOLKIT_ROOT_DIR}")

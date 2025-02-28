@@ -1443,6 +1443,640 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
 
 
 
+#include <sl/Camera.hpp>
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <numeric>
+#include <algorithm>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+// Eigen
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+
+// OpenCV
+#include <opencv2/opencv.hpp>
+
+// Stella-VSLAM (headers depend on your setup)
+#include <stella_vslam/system.h>
+#include <stella_vslam/config.h>
+#include <stella_vslam/publish/frame_publisher.h>
+#include <stella_vslam/publish/map_publisher.h>
+#include <stella_vslam/util/yaml.h>
+
+// If you have these viewers, include them:
+#ifdef HAVE_PANGOLIN_VIEWER
+#include <pangolin_viewer/viewer.h>
+#endif
+#ifdef HAVE_IRIDESCENCE_VIEWER
+#include <iridescence_viewer/viewer.h>
+#endif
+#ifdef HAVE_SOCKET_PUBLISHER
+#include <socket_publisher/publisher.h>
+#endif
+
+// ------------------------------------
+// EKF code (basic) for IMU
+// ------------------------------------
+struct State {
+    Eigen::Vector3d position;
+    Eigen::Vector3d velocity;
+    Eigen::Quaterniond orientation; // track orientation as a quaternion
+};
+
+class InertialEKF {
+public:
+    InertialEKF() {
+        // state vector: [px, py, pz, vx, vy, vz]
+        x_ = Eigen::VectorXd::Zero(6);
+        // covariance
+        P_ = Eigen::MatrixXd::Identity(6, 6) * 1e-3;
+        // process noise
+        Q_ = Eigen::MatrixXd::Identity(6, 6) * 1e-4;
+        // measurement noise for velocity (ZUPT, 3x3)
+        R_ = Eigen::MatrixXd::Identity(3, 3) * 1e-2;
+    }
+
+    // Predict step
+    void predict(const Eigen::Vector3d& acc_world, double dt) {
+        // x_(0..2) = position, x_(3..5) = velocity
+        Eigen::VectorXd x_pred = x_;
+        x_pred.segment<3>(0) += x_.segment<3>(3) * dt + 0.5 * acc_world * dt * dt;
+        x_pred.segment<3>(3) += acc_world * dt;
+
+        // Jacobian F
+        Eigen::MatrixXd F = Eigen::MatrixXd::Identity(6,6);
+        F.block<3,3>(0,3) = Eigen::Matrix3d::Identity() * dt;
+
+        P_ = F * P_ * F.transpose() + Q_;
+        x_ = x_pred;
+    }
+
+    // ZUPT update (if stationary)
+    void updateZUPT(const Eigen::Vector3d& meas_vel) {
+        // H = [0_3x3 | I_3x3]
+        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 6);
+        H.block<3,3>(0,3) = Eigen::Matrix3d::Identity();
+
+        Eigen::Vector3d v_pred = x_.segment<3>(3);
+        Eigen::Vector3d y = meas_vel - v_pred; // measurement - prediction
+
+        Eigen::MatrixXd S = H * P_ * H.transpose() + R_;
+        Eigen::MatrixXd K = P_ * H.transpose() * S.inverse();
+
+        x_ = x_ + K * y;
+
+        Eigen::MatrixXd I = Eigen::MatrixXd::Identity(6,6);
+        P_ = (I - K * H) * P_;
+    }
+
+    Eigen::Vector3d getPosition() const {
+        return x_.segment<3>(0);
+    }
+    Eigen::Vector3d getVelocity() const {
+        return x_.segment<3>(3);
+    }
+    void setState(const Eigen::Vector3d& pos, const Eigen::Vector3d& vel) {
+        x_.segment<3>(0) = pos;
+        x_.segment<3>(3) = vel;
+    }
+
+private:
+    // [px, py, pz, vx, vy, vz]
+    Eigen::VectorXd x_;
+    // Covariance
+    Eigen::MatrixXd P_;
+    // Process noise
+    Eigen::MatrixXd Q_;
+    // Measurement noise
+    Eigen::MatrixXd R_;
+};
+
+// Check if stationary: naive approach
+bool isStationary(const Eigen::Vector3d& gyro_deg_s,
+                  const Eigen::Vector3d& accel_body,
+                  double gyro_threshold_deg_s = 1.0,
+                  double accel_threshold_m_s2 = 0.1) {
+    // If angular velocity is near zero, and accel magnitude ~ 9.81
+    if ((std::fabs(gyro_deg_s.x()) < gyro_threshold_deg_s) &&
+        (std::fabs(gyro_deg_s.y()) < gyro_threshold_deg_s) &&
+        (std::fabs(gyro_deg_s.z()) < gyro_threshold_deg_s))
+    {
+        double accel_mag = accel_body.norm();
+        double g = 9.81;
+        if (std::fabs(accel_mag - g) < accel_threshold_m_s2) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ------------------------------------
+// The combined function
+// ------------------------------------
+int mono_tracking_zed_pose_depth_with_imu(
+    const std::shared_ptr<stella_vslam::system>& slam,
+    const std::shared_ptr<stella_vslam::config>& cfg,
+    const unsigned int cam_num,
+    const std::string& mask_img_path,
+    const float scale,
+    const std::string& map_db_path,
+    const std::string& viewer_string)
+{
+    // ------------------
+    // Load mask if provided
+    // ------------------
+    cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE);
+
+    // ------------------
+    // Socket initialization
+    // ------------------
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Socket creation failed");
+        slam->shutdown();
+        return EXIT_FAILURE;
+    }
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    std::string ip_address = cfg->yaml_node_["SocketPublisher"]["address"].as<std::string>();
+    int port_id = cfg->yaml_node_["SocketPublisher"]["port"].as<int>();
+    server_addr.sin_port = htons(port_id);
+    server_addr.sin_addr.s_addr = inet_addr(ip_address.c_str());
+    if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection failed");
+        slam->shutdown();
+        close(sock);
+        return EXIT_FAILURE;
+    }
+
+    // ------------------
+    // Viewer initialization
+    // ------------------
+#ifdef HAVE_PANGOLIN_VIEWER
+    std::shared_ptr<pangolin_viewer::viewer> pangolin_viewer;
+#endif
+#ifdef HAVE_IRIDESCENCE_VIEWER
+    std::shared_ptr<iridescence_viewer::viewer> iridescence_viewer;
+    std::mutex mtx_pause;
+    bool is_paused = false;
+    std::mutex mtx_terminate;
+    bool terminate_is_requested = false;
+    std::mutex mtx_step;
+    unsigned int step_count = 0;
+#endif
+#ifdef HAVE_SOCKET_PUBLISHER
+    std::shared_ptr<socket_publisher::publisher> socket_publisher;
+#endif
+
+    if (viewer_string == "pangolin_viewer") {
+#ifdef HAVE_PANGOLIN_VIEWER
+        pangolin_viewer = std::make_shared<pangolin_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "PangolinViewer"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+#endif
+    }
+    else if (viewer_string == "iridescence_viewer") {
+#ifdef HAVE_IRIDESCENCE_VIEWER
+        iridescence_viewer = std::make_shared<iridescence_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "IridescenceViewer"),
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+        // Add controls
+        iridescence_viewer->add_checkbox("Pause", [&is_paused, &mtx_pause](bool check) {
+            std::lock_guard<std::mutex> lock(mtx_pause);
+            is_paused = check;
+        });
+        iridescence_viewer->add_button("Step", [&step_count, &mtx_step] {
+            std::lock_guard<std::mutex> lock(mtx_step);
+            step_count++;
+        });
+        iridescence_viewer->add_button("Reset", [&slam] {
+            slam->request_reset();
+        });
+        iridescence_viewer->add_button("Save and exit", 
+            [&is_paused, &mtx_pause, &terminate_is_requested, &mtx_terminate, &iridescence_viewer] {
+            {
+                std::lock_guard<std::mutex> lock1(mtx_pause);
+                is_paused = false;
+            }
+            {
+                std::lock_guard<std::mutex> lock2(mtx_terminate);
+                terminate_is_requested = true;
+            }
+            iridescence_viewer->request_terminate();
+        });
+        iridescence_viewer->add_close_callback(
+            [&is_paused, &mtx_pause, &terminate_is_requested, &mtx_terminate] {
+            {
+                std::lock_guard<std::mutex> lock1(mtx_pause);
+                is_paused = false;
+            }
+            {
+                std::lock_guard<std::mutex> lock2(mtx_terminate);
+                terminate_is_requested = true;
+            }
+        });
+#endif
+    }
+    else if (viewer_string == "socket_publisher") {
+#ifdef HAVE_SOCKET_PUBLISHER
+        socket_publisher = std::make_shared<socket_publisher::publisher>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "SocketPublisher"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+#endif
+    }
+
+    // ------------------
+    // ZED camera initialization
+    // ------------------
+    sl::Camera zed;
+    sl::InitParameters init_params;
+    init_params.camera_resolution = sl::RESOLUTION::HD720;
+    init_params.depth_mode = sl::DEPTH_MODE::PERFORMANCE;
+    init_params.coordinate_units = sl::UNIT::MILLIMETER;
+    init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP; // For consistent IMU gravity direction
+
+    sl::ERROR_CODE err = zed.open(init_params);
+    if (err != sl::ERROR_CODE::SUCCESS) {
+        std::cerr << "Error opening ZED camera: " << sl::toString(err) << std::endl;
+        slam->shutdown();
+        close(sock);
+        return EXIT_FAILURE;
+    }
+
+    if (!zed.getCameraInformation().sensors_configuration.isSensorAvailable(sl::SENSOR_TYPE::GYROSCOPE)) {
+        std::cerr << "IMU data is not available on this camera model." << std::endl;
+        slam->shutdown();
+        close(sock);
+        zed.close();
+        return EXIT_FAILURE;
+    }
+
+    // Shared data structure for frames & pose
+    struct FramePoseData {
+        cv::Mat color_frame;
+        cv::Mat depth_frame;
+        Eigen::Matrix4d pose;
+        bool has_pose = false;
+    };
+    std::mutex data_mutex;
+    FramePoseData shared_data;
+
+    bool is_not_end = true;
+    unsigned int num_frame = 0;
+    std::vector<double> track_times;
+
+    // ------------------
+    // IMU / EKF Setup
+    // ------------------
+    InertialEKF ekf;
+    ekf.setState(Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero()); // start at origin, zero velocity
+
+    State state;
+    state.position = Eigen::Vector3d::Zero();
+    state.velocity = Eigen::Vector3d::Zero();
+    state.orientation = Eigen::Quaterniond::Identity();
+
+    auto previous_time = std::chrono::steady_clock::now();
+    // Gravity in Y-down if Y is up => gravity = (0, -9.81, 0)
+    Eigen::Vector3d gravity(0, -9.81, 0);
+
+    // ------------------
+    // SLAM thread
+    // ------------------
+    std::thread slam_thread([&]() {
+        while (is_not_end) {
+#ifdef HAVE_IRIDESCENCE_VIEWER
+            // Pause logic if using iridescence_viewer
+            while (true) {
+                {
+                    std::lock_guard<std::mutex> lock(mtx_pause);
+                    if (!is_paused) {
+                        break;
+                    }
+                }
+                {
+                    std::lock_guard<std::mutex> lock(mtx_step);
+                    if (step_count > 0) {
+                        step_count--;
+                        break;
+                    }
+                }
+                std::this_thread::sleep_for(std::chrono::microseconds(5000));
+            }
+
+            // Termination check from the viewer
+            {
+                std::lock_guard<std::mutex> lock(mtx_terminate);
+                if (terminate_is_requested) {
+                    is_not_end = false;
+                    break;
+                }
+            }
+#else
+            // If not using iridescence_viewer, check SLAM termination
+            if (slam->terminate_is_requested()) {
+                is_not_end = false;
+                break;
+            }
+#endif
+
+            // Grab from ZED
+            if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
+                sl::Mat zed_image, zed_depth;
+                zed.retrieveImage(zed_image, sl::VIEW::LEFT, sl::MEM::CPU);
+                zed.retrieveMeasure(zed_depth, sl::MEASURE::DEPTH, sl::MEM::CPU);
+
+                // Convert to OpenCV
+                cv::Mat rgb_image(zed_image.getHeight(), zed_image.getWidth(), CV_8UC4, zed_image.getPtr<sl::uchar1>(sl::MEM::CPU));
+                cv::Mat color_frame;
+                cv::cvtColor(rgb_image, color_frame, cv::COLOR_BGRA2BGR);
+
+                cv::Mat depth_frame(zed_depth.getHeight(), zed_depth.getWidth(), CV_32FC1, zed_depth.getPtr<sl::float1>(sl::MEM::CPU));
+
+                // Scale if needed
+                if (scale != 1.0f) {
+                    cv::resize(color_frame, color_frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
+                    cv::resize(depth_frame, depth_frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
+                }
+
+                // ----------------------
+                // IMU Data
+                // ----------------------
+                sl::SensorsData sensors_data;
+                zed.getSensorsData(sensors_data, sl::TIME_REFERENCE::CURRENT);
+
+                auto angular_velocity = sensors_data.imu.angular_velocity;      // [deg/s]
+                auto linear_acceleration = sensors_data.imu.linear_acceleration; // [m/s^2]
+                auto zed_orientation = sensors_data.imu.pose.getOrientation();   // (ox, oy, oz, ow)
+
+                // Convert orientation to Eigen
+                Eigen::Quaterniond q_imu(
+                    static_cast<double>(zed_orientation.ow),
+                    static_cast<double>(zed_orientation.ox),
+                    static_cast<double>(zed_orientation.oy),
+                    static_cast<double>(zed_orientation.oz));
+                q_imu.normalize();
+
+                // Compute dt
+                auto current_time = std::chrono::steady_clock::now();
+                double dt = std::chrono::duration<double>(current_time - previous_time).count();
+                previous_time = current_time;
+
+                // Convert body accel to world frame
+                Eigen::Vector3d acc_body(linear_acceleration.x, linear_acceleration.y, linear_acceleration.z);
+                Eigen::Vector3d acc_world = q_imu * acc_body;
+                // Subtract gravity
+                acc_world -= gravity;
+
+                // EKF predict
+                ekf.predict(acc_world, dt);
+
+                // Possibly do ZUPT if stationary
+                Eigen::Vector3d gyro_deg_s(angular_velocity.x, angular_velocity.y, angular_velocity.z);
+                if (isStationary(gyro_deg_s, acc_body)) {
+                    ekf.updateZUPT(Eigen::Vector3d::Zero());
+                }
+
+                // Update state
+                state.position = ekf.getPosition();
+                state.velocity = ekf.getVelocity();
+                // For orientation, we take the IMU's orientation
+                state.orientation = q_imu;
+
+                // ----------------------
+                // SLAM processing
+                // ----------------------
+                auto now_chrono = std::chrono::system_clock::now();
+                double timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(now_chrono.time_since_epoch()).count();
+
+                auto tp_1 = std::chrono::steady_clock::now();
+                slam->feed_monocular_frame(color_frame, timestamp, mask);
+
+                auto tracking_state = slam->get_frame_publisher()->get_tracking_state();
+                Eigen::Matrix4d cam_pose = Eigen::Matrix4d::Identity();
+                bool has_pose = false;
+
+                if (tracking_state == "Tracking") {
+                    cam_pose = slam->get_map_publisher()->get_current_cam_pose();
+                    has_pose = true;
+
+                    // Print pose
+                    std::cout << "Frame " << num_frame << " SLAM Pose:\n" << cam_pose << std::endl;
+                }
+                else {
+                    std::cout << "Frame " << num_frame << " tracking state: " << tracking_state << std::endl;
+                }
+
+                auto tp_2 = std::chrono::steady_clock::now();
+                double track_time = std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+                track_times.push_back(track_time);
+
+                // ----------------------
+                // Fuse SLAM pose & EKF
+                // (Naive approach)
+                // ----------------------
+                // Use IMU orientation
+                Eigen::Matrix3d R_imu = state.orientation.toRotationMatrix();
+
+                // Weighted translation between SLAM & EKF
+                double alpha = 0.7; // weighting for SLAM
+                Eigen::Vector3d t_slam = cam_pose.block<3,1>(0,3);
+                Eigen::Vector3d t_ekf = state.position;
+                Eigen::Vector3d t_fused = alpha * t_slam + (1.0 - alpha) * t_ekf;
+
+                Eigen::Matrix4d fused_pose = Eigen::Matrix4d::Identity();
+                fused_pose.block<3,3>(0,0) = R_imu;
+                fused_pose.block<3,1>(0,3) = t_fused;
+
+                // Store in shared data
+                {
+                    std::lock_guard<std::mutex> lock(data_mutex);
+                    color_frame.copyTo(shared_data.color_frame);
+                    depth_frame.copyTo(shared_data.depth_frame);
+                    shared_data.has_pose = true;
+                    shared_data.pose = fused_pose;
+                }
+
+                ++num_frame;
+            }
+            else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        }
+
+        // Wait for loop closure / BA
+        while (slam->loop_BA_is_running()) {
+            std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        }
+        slam->shutdown();
+    });
+
+    // ------------------
+    // Data sender thread
+    // ------------------
+    std::thread data_sender_thread([&]() {
+        while (is_not_end) {
+            cv::Mat color_local, depth_local;
+            Eigen::Matrix4d local_pose;
+            bool local_has_pose = false;
+
+            {
+                std::lock_guard<std::mutex> lock(data_mutex);
+                if (!shared_data.color_frame.empty()) {
+                    color_local = shared_data.color_frame.clone();
+                    depth_local = shared_data.depth_frame.clone();
+                    local_has_pose = shared_data.has_pose;
+                    local_pose = shared_data.pose;
+                }
+            }
+
+            // Send images + pose
+            if (!color_local.empty()) {
+                // 1) color image (JPEG)
+                std::vector<uchar> buf;
+                cv::imencode(".jpg", color_local, buf);
+                int img_size = static_cast<int>(buf.size());
+                int32_t net_img_size = htonl(img_size);
+                int sent = send(sock, &net_img_size, sizeof(net_img_size), 0);
+                if (sent != sizeof(net_img_size)) {
+                    perror("Failed to send color image size");
+                    break;
+                }
+                int total_sent = 0;
+                while (total_sent < img_size) {
+                    sent = send(sock, buf.data() + total_sent, img_size - total_sent, 0);
+                    if (sent <= 0) {
+                        perror("Failed to send color image data");
+                        break;
+                    }
+                    total_sent += sent;
+                }
+                if (total_sent != img_size) {
+                    perror("Failed to send complete color image data");
+                    break;
+                }
+
+                // 2) depth image (PNG)
+                if (!depth_local.empty()) {
+                    depth_local.convertTo(depth_local, CV_16U);
+                    std::vector<uchar> depth_buf;
+                    cv::imencode(".png", depth_local, depth_buf);
+                    int depth_img_size = static_cast<int>(depth_buf.size());
+                    int32_t net_depth_img_size = htonl(depth_img_size);
+
+                    sent = send(sock, &net_depth_img_size, sizeof(net_depth_img_size), 0);
+                    if (sent != sizeof(net_depth_img_size)) {
+                        perror("Failed to send depth image size");
+                        break;
+                    }
+
+                    total_sent = 0;
+                    while (total_sent < depth_img_size) {
+                        sent = send(sock, depth_buf.data() + total_sent, depth_img_size - total_sent, 0);
+                        if (sent <= 0) {
+                            perror("Failed to send depth image data");
+                            break;
+                        }
+                        total_sent += sent;
+                    }
+                    if (total_sent != depth_img_size) {
+                        perror("Failed to send complete depth image data");
+                        break;
+                    }
+                }
+                else {
+                    int32_t zero_size = 0;
+                    int32_t net_depth_img_size = htonl(zero_size);
+                    send(sock, &net_depth_img_size, sizeof(net_depth_img_size), 0);
+                }
+
+                // 3) pose data (16 doubles)
+                double pose_array[16];
+                if (local_has_pose) {
+                    memcpy(pose_array, local_pose.data(), sizeof(pose_array));
+                }
+                else {
+                    std::fill(std::begin(pose_array), std::end(pose_array), 0.0);
+                }
+
+                total_sent = 0;
+                int pose_data_size = sizeof(pose_array);
+                while (total_sent < pose_data_size) {
+                    sent = send(sock, ((char*)pose_array) + total_sent, pose_data_size - total_sent, 0);
+                    if (sent <= 0) {
+                        perror("Failed to send pose data");
+                        break;
+                    }
+                    total_sent += sent;
+                }
+                if (total_sent != pose_data_size) {
+                    perror("Failed to send complete pose data");
+                    break;
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(33)); // ~30 FPS
+        }
+    });
+
+    // ------------------
+    // Run viewer in the main thread
+    // ------------------
+    if (viewer_string == "pangolin_viewer") {
+#ifdef HAVE_PANGOLIN_VIEWER
+        pangolin_viewer->run();
+#endif
+    }
+    else if (viewer_string == "iridescence_viewer") {
+#ifdef HAVE_IRIDESCENCE_VIEWER
+        iridescence_viewer->run();
+#endif
+    }
+    else if (viewer_string == "socket_publisher") {
+#ifdef HAVE_SOCKET_PUBLISHER
+        socket_publisher->run();
+#endif
+    }
+
+    // Wait for threads
+    data_sender_thread.join();
+    slam_thread.join();
+
+    // Cleanup
+    close(sock);
+    zed.close();
+
+    // Print tracking times
+    std::sort(track_times.begin(), track_times.end());
+    double total_track_time = std::accumulate(track_times.begin(), track_times.end(), 0.0);
+    if (!track_times.empty()) {
+        std::cout << "Median tracking time: " 
+                  << track_times.at(track_times.size() / 2) << " [s]" << std::endl;
+        std::cout << "Mean tracking time: "
+                  << (total_track_time / track_times.size()) << " [s]" << std::endl;
+    }
+
+    // Save map if requested
+    if (!map_db_path.empty()) {
+        if (!slam->save_map_database(map_db_path)) {
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
 
 
 
@@ -2538,7 +3172,7 @@ int main(int argc, char* argv[]) {
     if (slam->get_camera()->setup_type_ == stella_vslam::camera::setup_type_t::Monocular) {
         // Select the appropriate tracking function based on the camera name
         if (camera_name == "ZED2") {
-            ret = mono_tracking_zed_pose_depth(slam,
+            ret = mono_tracking_zed_pose_depth_with_imu(slam,
                                     cfg,
                                     cam_num->value(),
                                     mask_img_path->value(),
@@ -2548,7 +3182,7 @@ int main(int argc, char* argv[]) {
         }
         else if (camera_name == "Intel RealSense D435") {
 
-            ret = mono_tracking_realsense_pose_depth(slam,
+            ret = mono_tracking_realsense_pose_depth (slam,
                                           cfg,
                                           cam_num->value(),
                                           mask_img_path->value(),
@@ -2558,6 +3192,7 @@ int main(int argc, char* argv[]) {
         }
         else {
             // Default to the original mono_tracking function for other cameras
+            //Make changes later to be more modular
             ret = mono_tracking(slam,
                                 cfg,
                                 cam_num->value(),
