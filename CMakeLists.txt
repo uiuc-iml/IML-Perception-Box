@@ -88,6 +88,9 @@ list(APPEND EXECUTABLE_TARGETS run_camera_slam)
 add_executable(imu src/imu.cc)
 list(APPEND EXECUTABLE_TARGETS imu)
 
+add_executable(camera_slam src/camera_slam.cc)
+list(APPEND EXECUTABLE_TARGETS camera_slam)
+
 # --- add_executable(run_image_slam src/run_image_slam.cc src/util/image_util.cc)
 # --- list(APPEND EXECUTABLE_TARGETS run_image_slam)
 

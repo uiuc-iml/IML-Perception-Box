@@ -24,15 +24,14 @@
 #include <stella_vslam/publish/map_publisher.h>
 #include <stella_vslam/util/yaml.h>
 
-// Viewers
 #ifdef HAVE_PANGOLIN_VIEWER
-#include <pangolin_viewer/viewer.h>
+#include "pangolin_viewer/viewer.h"
 #endif
 #ifdef HAVE_IRIDESCENCE_VIEWER
-#include <iridescence_viewer/viewer.h>
+#include "iridescence_viewer/viewer.h"
 #endif
 #ifdef HAVE_SOCKET_PUBLISHER
-#include <socket_publisher/publisher.h>
+#include "socket_publisher/publisher.h"
 #endif
 
 // ----------------------------
@@ -160,28 +159,67 @@ void process_slam(const std::shared_ptr<stella_vslam::system>& slam,
 // ----------------------------
 // Function to manage viewer
 // ----------------------------
-void run_viewer(const std::shared_ptr<stella_vslam::system>& slam, const std::string& viewer_string) {
+void run_viewer(const std::shared_ptr<stella_vslam::system>& slam, const std::string& viewer_string, const std::shared_ptr<stella_vslam::config>& cfg) {
 #ifdef HAVE_PANGOLIN_VIEWER
+    std::shared_ptr<pangolin_viewer::viewer> viewer;
     if (viewer_string == "pangolin_viewer") {
-        std::shared_ptr<pangolin_viewer::viewer> pangolin_viewer = std::make_shared<pangolin_viewer::viewer>(
-            slam->get_frame_publisher(), slam->get_map_publisher());
-        pangolin_viewer->run();
+        viewer = std::make_shared<pangolin_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "PangolinViewer"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
     }
 #endif
 #ifdef HAVE_IRIDESCENCE_VIEWER
+    std::shared_ptr<iridescence_viewer::viewer> iridescence_viewer;
+    std::mutex mtx_pause;
+    bool is_paused = false;
+    std::mutex mtx_terminate;
+    bool terminate_is_requested = false;
+    std::mutex mtx_step;
+    unsigned int step_count = 0;
     if (viewer_string == "iridescence_viewer") {
-        std::shared_ptr<iridescence_viewer::viewer> iridescence_viewer = std::make_shared<iridescence_viewer::viewer>(
-            slam->get_frame_publisher(), slam->get_map_publisher());
-        iridescence_viewer->run();
+        iridescence_viewer = std::make_shared<iridescence_viewer::viewer>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "IridescenceViewer"),
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
+        iridescence_viewer->add_checkbox("Pause", [&is_paused, &mtx_pause](bool check) {
+            std::lock_guard<std::mutex> lock(mtx_pause);
+            is_paused = check;
+        });
+        iridescence_viewer->add_button("Step", [&step_count, &mtx_step] {
+            std::lock_guard<std::mutex> lock(mtx_step);
+            step_count++;
+        });
+        iridescence_viewer->add_button("Reset", [&is_paused, &mtx_pause, &slam] {
+            slam->request_reset();
+        });
+        iridescence_viewer->add_button("Save and exit", [&is_paused, &mtx_pause, &terminate_is_requested, &mtx_terminate, &slam, &iridescence_viewer] {
+            std::lock_guard<std::mutex> lock1(mtx_pause);
+            is_paused = false;
+            std::lock_guard<std::mutex> lock2(mtx_terminate);
+            terminate_is_requested = true;
+            iridescence_viewer->request_terminate();
+        });
+        iridescence_viewer->add_close_callback([&is_paused, &mtx_pause, &terminate_is_requested, &mtx_terminate] {
+            std::lock_guard<std::mutex> lock1(mtx_pause);
+            is_paused = false;
+            std::lock_guard<std::mutex> lock2(mtx_terminate);
+            terminate_is_requested = true;
+        });
     }
 #endif
 #ifdef HAVE_SOCKET_PUBLISHER
+    std::shared_ptr<socket_publisher::publisher> publisher;
     if (viewer_string == "socket_publisher") {
-        std::shared_ptr<socket_publisher::publisher> socket_publisher = std::make_shared<socket_publisher::publisher>(
-            slam->get_frame_publisher(), slam->get_map_publisher());
-        socket_publisher->run();
+        publisher = std::make_shared<socket_publisher::publisher>(
+            stella_vslam::util::yaml_optional_ref(cfg->yaml_node_, "SocketPublisher"),
+            slam,
+            slam->get_frame_publisher(),
+            slam->get_map_publisher());
     }
 #endif
+
 }
 
 // ----------------------------
@@ -214,7 +252,7 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
     bool is_not_end = true;
 
     std::thread slam_thread(process_slam, slam, std::ref(zed), std::ref(mask), std::ref(shared_data), std::ref(data_mutex), std::ref(is_not_end));
-    std::thread viewer_thread(run_viewer, slam, viewer_string);
+    std::thread viewer_thread(run_viewer, slam, viewer_string, cfg);
 
     slam_thread.join();
     viewer_thread.join();
@@ -224,3 +262,6 @@ int mono_tracking_zed_pose_depth(const std::shared_ptr<stella_vslam::system>& sl
     return EXIT_SUCCESS;
 }
 
+int main() {
+	return 0;
+}

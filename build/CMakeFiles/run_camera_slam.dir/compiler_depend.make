@@ -876,25 +876,25 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
   /usr/local/include/opencv4/opencv2/video/tracking.hpp \
   /usr/local/include/opencv4/opencv2/video/background_segm.hpp \
   /usr/local/zed/include/sl/Camera.hpp \
-  /usr/local/cuda-12.6/include/cuda.h \
-  /usr/local/cuda-12.6/include/cuda_runtime.h \
-  /usr/local/cuda-12.6/include/crt/host_config.h \
-  /usr/local/cuda-12.6/include/builtin_types.h \
-  /usr/local/cuda-12.6/include/device_types.h \
-  /usr/local/cuda-12.6/include/crt/host_defines.h \
-  /usr/local/cuda-12.6/include/driver_types.h \
-  /usr/local/cuda-12.6/include/vector_types.h \
-  /usr/local/cuda-12.6/include/surface_types.h \
-  /usr/local/cuda-12.6/include/texture_types.h \
-  /usr/local/cuda-12.6/include/library_types.h \
-  /usr/local/cuda-12.6/include/channel_descriptor.h \
-  /usr/local/cuda-12.6/include/cuda_runtime_api.h \
-  /usr/local/cuda-12.6/include/cuda_device_runtime_api.h \
-  /usr/local/cuda-12.6/include/driver_functions.h \
-  /usr/local/cuda-12.6/include/vector_functions.h \
-  /usr/local/cuda-12.6/include/vector_functions.hpp \
-  /usr/local/cuda-12.6/include/cuda_runtime_api.h \
-  /usr/local/cuda-12.6/include/device_launch_parameters.h \
+  /usr/local/cuda/include/cuda.h \
+  /usr/local/cuda/include/cuda_runtime.h \
+  /usr/local/cuda/include/crt/host_config.h \
+  /usr/local/cuda/include/builtin_types.h \
+  /usr/local/cuda/include/device_types.h \
+  /usr/local/cuda/include/crt/host_defines.h \
+  /usr/local/cuda/include/driver_types.h \
+  /usr/local/cuda/include/vector_types.h \
+  /usr/local/cuda/include/surface_types.h \
+  /usr/local/cuda/include/texture_types.h \
+  /usr/local/cuda/include/library_types.h \
+  /usr/local/cuda/include/channel_descriptor.h \
+  /usr/local/cuda/include/cuda_runtime_api.h \
+  /usr/local/cuda/include/cuda_device_runtime_api.h \
+  /usr/local/cuda/include/driver_functions.h \
+  /usr/local/cuda/include/vector_functions.h \
+  /usr/local/cuda/include/vector_functions.hpp \
+  /usr/local/cuda/include/cuda_runtime_api.h \
+  /usr/local/cuda/include/device_launch_parameters.h \
   /usr/local/include/librealsense2/rs.hpp \
   /usr/local/include/librealsense2/rs.h \
   /usr/local/include/librealsense2/rsutil.h \
@@ -944,8 +944,6 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/local/include/librealsense2/hpp/rs_processing.hpp:
 
-/usr/local/include/librealsense2/hpp/rs_frame.hpp:
-
 /usr/local/include/librealsense2/hpp/rs_record_playback.hpp:
 
 /usr/local/include/librealsense2/hpp/rs_context.hpp:
@@ -962,17 +960,29 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/local/include/librealsense2/rs.hpp:
 
-/usr/local/cuda-12.6/include/cuda_device_runtime_api.h:
+/usr/local/include/librealsense2/hpp/rs_frame.hpp:
 
-/usr/local/cuda-12.6/include/library_types.h:
+/usr/local/cuda/include/vector_functions.hpp:
 
-/usr/local/cuda-12.6/include/texture_types.h:
+/usr/local/cuda/include/driver_functions.h:
 
-/usr/local/cuda-12.6/include/vector_types.h:
+/usr/local/cuda/include/cuda_device_runtime_api.h:
 
-/usr/local/cuda-12.6/include/driver_types.h:
+/usr/local/cuda/include/cuda_runtime_api.h:
 
-/usr/local/cuda-12.6/include/cuda_runtime.h:
+/usr/local/cuda/include/library_types.h:
+
+/usr/local/cuda/include/surface_types.h:
+
+/usr/local/cuda/include/vector_types.h:
+
+/usr/local/cuda/include/crt/host_defines.h:
+
+/usr/local/cuda/include/crt/host_config.h:
+
+/usr/local/cuda/include/cuda_runtime.h:
+
+/usr/local/cuda/include/cuda.h:
 
 /usr/local/include/opencv4/opencv2/stitching/detail/blenders.hpp:
 
@@ -1040,13 +1050,9 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/local/include/opencv4/opencv2/flann/saving.h:
 
-/usr/local/cuda-12.6/include/channel_descriptor.h:
-
 /usr/local/include/opencv4/opencv2/flann/params.h:
 
 /usr/local/include/opencv4/opencv2/flann/flann_base.hpp:
-
-/usr/local/cuda-12.6/include/driver_functions.h:
 
 /usr/local/include/opencv4/opencv2/dnn/dnn.inl.hpp:
 
@@ -1058,13 +1064,13 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/local/include/opencv4/opencv2/core/async.hpp:
 
-/usr/local/cuda-12.6/include/surface_types.h:
-
 /usr/local/include/opencv4/opencv2/dnn/dnn.hpp:
 
 /usr/local/include/opencv4/opencv2/opencv.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/in.h:
+
+/usr/local/cuda/include/device_launch_parameters.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_osockaddr.h:
 
@@ -1188,15 +1194,13 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/local/include/stella_vslam/data/bow_vocabulary.h:
 
-/usr/local/cuda-12.6/include/crt/host_defines.h:
-
 /usr/local/include/stella_vslam/data/frame_observation.h:
-
-/usr/local/cuda-12.6/include/device_launch_parameters.h:
 
 /usr/local/include/eigen3/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h:
 
 /usr/local/include/eigen3/Eigen/src/Eigenvalues/Tridiagonalization.h:
+
+/usr/local/cuda/include/channel_descriptor.h:
 
 /usr/local/include/eigen3/Eigen/Eigenvalues:
 
@@ -1297,8 +1301,6 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/local/include/pangolin/var/varvaluet.h:
 
 /usr/local/include/pangolin/var/varvalue.h:
-
-/usr/local/cuda-12.6/include/vector_functions.hpp:
 
 /usr/include/c++/11/stdlib.h:
 
@@ -1425,6 +1427,8 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/include/c++/11/sstream:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_timeval.h:
+
+/usr/local/cuda/include/device_types.h:
 
 /usr/include/c++/11/bits/locale_facets.h:
 
@@ -1646,15 +1650,11 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/include/aarch64-linux-gnu/asm/bitsperlong.h:
 
-/usr/local/cuda-12.6/include/cuda.h:
-
 /usr/local/include/pangolin/gl/glvbo.h:
 
 /usr/include/aarch64-linux-gnu/bits/floatn-common.h:
 
 /usr/include/aarch64-linux-gnu/bits/locale.h:
-
-/usr/local/cuda-12.6/include/builtin_types.h:
 
 /usr/include/c++/11/typeinfo:
 
@@ -1802,6 +1802,8 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h:
 
+/usr/local/cuda/include/vector_functions.h:
+
 /usr/include/c++/11/bits/stl_construct.h:
 
 /usr/local/include/pangolin_viewer/color_scheme.h:
@@ -1901,8 +1903,6 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/include/aarch64-linux-gnu/bits/select.h:
 
 /usr/include/c++/11/bits/stl_tree.h:
-
-/usr/local/cuda-12.6/include/device_types.h:
 
 /usr/include/aarch64-linux-gnu/c++/11/bits/messages_members.h:
 
@@ -2074,6 +2074,8 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/include/aarch64-linux-gnu/bits/floatn.h:
 
+/usr/local/cuda/include/driver_types.h:
+
 /usr/local/include/opencv4/opencv2/flann/miniflann.hpp:
 
 /usr/include/c++/11/bits/algorithmfwd.h:
@@ -2103,8 +2105,6 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
 
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h:
-
-/usr/local/cuda-12.6/include/vector_functions.h:
 
 /usr/include/aarch64-linux-gnu/bits/siginfo-arch.h:
 
@@ -2204,8 +2204,6 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 
 /usr/local/include/librealsense2/h/rs_context.h:
 
-/usr/local/cuda-12.6/include/cuda_runtime_api.h:
-
 /usr/include/aarch64-linux-gnu/bits/local_lim.h:
 
 /usr/include/aarch64-linux-gnu/bits/posix2_lim.h:
@@ -2253,6 +2251,8 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/include/aarch64-linux-gnu/bits/fcntl.h:
 
 /usr/local/include/eigen3/Eigen/src/Core/arch/CUDA/PacketMathHalf.h:
+
+/usr/local/cuda/include/builtin_types.h:
 
 /usr/include/endian.h:
 
@@ -2345,8 +2345,6 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/local/include/eigen3/Eigen/src/Core/Array.h:
 
 /usr/local/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h:
-
-/usr/local/cuda-12.6/include/crt/host_config.h:
 
 /usr/local/include/eigen3/Eigen/src/Core/arch/CUDA/Complex.h:
 
@@ -2567,6 +2565,8 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o: /home/motion/Perception
 /usr/include/c++/11/cstdint:
 
 /usr/local/include/eigen3/Eigen/src/Geometry/Umeyama.h:
+
+/usr/local/cuda/include/texture_types.h:
 
 /usr/local/include/opencv4/opencv2/core/types.hpp:
 

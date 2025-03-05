@@ -877,25 +877,25 @@ CMakeFiles/run_camera_slam.dir/src/run_camera_slam.cc.o
  /usr/local/include/opencv4/opencv2/video/tracking.hpp
  /usr/local/include/opencv4/opencv2/video/background_segm.hpp
  /usr/local/zed/include/sl/Camera.hpp
- /usr/local/cuda-12.6/include/cuda.h
- /usr/local/cuda-12.6/include/cuda_runtime.h
- /usr/local/cuda-12.6/include/crt/host_config.h
- /usr/local/cuda-12.6/include/builtin_types.h
- /usr/local/cuda-12.6/include/device_types.h
- /usr/local/cuda-12.6/include/crt/host_defines.h
- /usr/local/cuda-12.6/include/driver_types.h
- /usr/local/cuda-12.6/include/vector_types.h
- /usr/local/cuda-12.6/include/surface_types.h
- /usr/local/cuda-12.6/include/texture_types.h
- /usr/local/cuda-12.6/include/library_types.h
- /usr/local/cuda-12.6/include/channel_descriptor.h
- /usr/local/cuda-12.6/include/cuda_runtime_api.h
- /usr/local/cuda-12.6/include/cuda_device_runtime_api.h
- /usr/local/cuda-12.6/include/driver_functions.h
- /usr/local/cuda-12.6/include/vector_functions.h
- /usr/local/cuda-12.6/include/vector_functions.hpp
- /usr/local/cuda-12.6/include/cuda_runtime_api.h
- /usr/local/cuda-12.6/include/device_launch_parameters.h
+ /usr/local/cuda/include/cuda.h
+ /usr/local/cuda/include/cuda_runtime.h
+ /usr/local/cuda/include/crt/host_config.h
+ /usr/local/cuda/include/builtin_types.h
+ /usr/local/cuda/include/device_types.h
+ /usr/local/cuda/include/crt/host_defines.h
+ /usr/local/cuda/include/driver_types.h
+ /usr/local/cuda/include/vector_types.h
+ /usr/local/cuda/include/surface_types.h
+ /usr/local/cuda/include/texture_types.h
+ /usr/local/cuda/include/library_types.h
+ /usr/local/cuda/include/channel_descriptor.h
+ /usr/local/cuda/include/cuda_runtime_api.h
+ /usr/local/cuda/include/cuda_device_runtime_api.h
+ /usr/local/cuda/include/driver_functions.h
+ /usr/local/cuda/include/vector_functions.h
+ /usr/local/cuda/include/vector_functions.hpp
+ /usr/local/cuda/include/cuda_runtime_api.h
+ /usr/local/cuda/include/device_launch_parameters.h
  /usr/local/include/librealsense2/rs.hpp
  /usr/local/include/librealsense2/rs.h
  /usr/local/include/librealsense2/rsutil.h

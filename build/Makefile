@@ -142,6 +142,43 @@ imu/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/imu.dir/build.make CMakeFiles/imu.dir/build
 .PHONY : imu/fast
 
+#=============================================================================
+# Target rules for targets named camera_slam
+
+# Build rule for target.
+camera_slam: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 camera_slam
+.PHONY : camera_slam
+
+# fast build rule for target.
+camera_slam/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_slam.dir/build.make CMakeFiles/camera_slam.dir/build
+.PHONY : camera_slam/fast
+
+src/camera_slam.o: src/camera_slam.cc.o
+.PHONY : src/camera_slam.o
+
+# target to build an object file
+src/camera_slam.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_slam.dir/build.make CMakeFiles/camera_slam.dir/src/camera_slam.cc.o
+.PHONY : src/camera_slam.cc.o
+
+src/camera_slam.i: src/camera_slam.cc.i
+.PHONY : src/camera_slam.i
+
+# target to preprocess a source file
+src/camera_slam.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_slam.dir/build.make CMakeFiles/camera_slam.dir/src/camera_slam.cc.i
+.PHONY : src/camera_slam.cc.i
+
+src/camera_slam.s: src/camera_slam.cc.s
+.PHONY : src/camera_slam.s
+
+# target to generate assembly for a file
+src/camera_slam.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_slam.dir/build.make CMakeFiles/camera_slam.dir/src/camera_slam.cc.s
+.PHONY : src/camera_slam.cc.s
+
 src/imu.o: src/imu.cc.o
 .PHONY : src/imu.o
 
@@ -198,8 +235,12 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... camera_slam"
 	@echo "... imu"
 	@echo "... run_camera_slam"
+	@echo "... src/camera_slam.o"
+	@echo "... src/camera_slam.i"
+	@echo "... src/camera_slam.s"
 	@echo "... src/imu.o"
 	@echo "... src/imu.i"
 	@echo "... src/imu.s"

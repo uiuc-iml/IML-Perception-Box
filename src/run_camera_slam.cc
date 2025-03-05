@@ -3017,10 +3017,6 @@ int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::syste
 
 
 
-
-
-
-
 int main(int argc, char* argv[]) {
 #ifdef USE_STACK_TRACE_LOGGER
     backward::SignalHandling sh;
