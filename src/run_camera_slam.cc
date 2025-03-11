@@ -29,12 +29,15 @@
 #include <popl.hpp>
 //#include <opencv2/highgui.hpp>
 
-#include <ghc/filesystem.hpp>
+
+
 #include <arpa/inet.h> // For socket functions
 #include <sys/socket.h> 
 #include <unistd.h> 
 
+#include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
+
 
 #ifdef USE_STACK_TRACE_LOGGER
 #include <backward.hpp>
@@ -2759,7 +2762,7 @@ int mono_tracking_realsense_pose(const std::shared_ptr<stella_vslam::system>& sl
 #include <stella_vslam/util/yaml.h>
 #include <stella_vslam/publish/frame_publisher.h>
 #include <stella_vslam/publish/map_publisher.h>
-#include <pangolin/pangolin.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

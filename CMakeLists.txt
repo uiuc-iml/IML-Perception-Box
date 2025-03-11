@@ -4,6 +4,9 @@ project(stella_vslam_examples LANGUAGES CXX C)
 # ----- Find dependencies -----
 
 find_package(stella_vslam REQUIRED)
+include_directories(/usr/local/include)
+include_directories(${CMAKE_SOURCE_DIR}/deps/ghc-filesystem/include)
+
 
 # RealSense
 find_package(realsense2 REQUIRED)
@@ -18,6 +21,7 @@ link_directories(${ZED_LIBRARY_DIRS})
 
 # Find CUDA
 find_package(CUDA REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui video videoio)
 
 # Add CUDA include and library directories
 include_directories(${CUDA_INCLUDE_DIRS})
@@ -91,6 +95,17 @@ list(APPEND EXECUTABLE_TARGETS imu)
 add_executable(camera_slam src/camera_slam.cc)
 list(APPEND EXECUTABLE_TARGETS camera_slam)
 
+add_executable(selectiveslam src/selectiveslam.cc)
+list(APPEND EXECUTABLE_TARGETS selectiveslam)
+
+add_executable(selectiveslam2 src/selectiveslam2.cc)
+list(APPEND EXECUTABLE_TARGETS selectiveslam2)
+
+add_executable(selectiveslam3 src/selectiveslam3.cc)
+list(APPEND EXECUTABLE_TARGETS selectiveslam3)
+
+add_executable(selectiveslam4 src/selectiveslam4.cc)
+list(APPEND EXECUTABLE_TARGETS selectiveslam4)
 # --- add_executable(run_image_slam src/run_image_slam.cc src/util/image_util.cc)
 # --- list(APPEND EXECUTABLE_TARGETS run_image_slam)
 
