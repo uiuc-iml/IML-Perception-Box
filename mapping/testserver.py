@@ -25,18 +25,18 @@ class MyServer:
         # Set up the XML-RPC server
         self.server = xmlrpc.server.SimpleXMLRPCServer(('10.192.142.59', 5001))
         self.server.register_introspection_functions()
-        self.server.register_function(self.start_task)
-        self.server.register_function(self.stop_task)
+        self.server.register_function(self.start_mapping)
+        self.server.register_function(self.stop_mapping)
         self.server.register_function(self.get_semantic_map)
-        self.server.register_function(self.pause_task)
-        self.server.register_function(self.resume_task)
-        self.server.register_function(self.get_map_stop_task)
+        self.server.register_function(self.pause_mapping)
+        self.server.register_function(self.resume_mapping)
+        self.server.register_function(self.get_map_stop_mapping)
         self.server.register_function(self.get_metric_map)
 
         self.task_thread = None
         self.queue_thread = None
         self.task_running = False
-        self.pause_mapping = True
+        self.pause_mapping_flag = True
         self.pause_integration = True
         self.vbg_access_lock = threading.Lock()  
         self.queue_empty = threading.Condition()
@@ -106,26 +106,29 @@ class MyServer:
         self.depth_max = config["Mapping"]["depth_max"]
         self.miu = config["Mapping"]["miu"]
 
-
-
-
         print(f"Configuration Loaded: {config}")
 
 
-    def start_task(self):
+    def start_mapping(self, integrate_semantics=True, color=False):
         if not self.task_running:
             self.task_running = True
-            self.pause_mapping = False
+            self.pause_mapping_flag = False
             self.pause_integration = False
             # Start mapping and queue threads
-            self.segmenter = MaskformerSegmenter()
+            self.segmenter = None
+            if(integrate_semantics):
+                num_labels = self.n_labels
+                self.segmenter = MaskformerSegmenter()
+            else:
+                num_labels = None
+
             self.rec = Reconstruction(
                 depth_scale=self.depth_scale,
                 depth_max=self.depth_max,
                 res=self.res,
                 voxel_size=self.voxel_size,
-                n_labels=self.n_labels,
-                integrate_color=True,
+                n_labels=num_labels,
+                integrate_color=color,
             )
             self.task_thread = threading.Thread(target=self.mapping, daemon=True)
             self.queue_thread = threading.Thread(target=self.fill_queue_from_socket, daemon=True)
@@ -135,10 +138,10 @@ class MyServer:
         else:
             return "Task is already running"
 
-    def stop_task(self):
+    def stop_mapping(self):
         if self.task_running:
             self.task_running = False
-            self.pause_mapping = True
+            self.pause_mapping_flag = True
             if self.task_thread.is_alive():
                 with self.queue_empty:
                     self.queue_empty.notify()
@@ -162,20 +165,20 @@ class MyServer:
             print("No mapping task was running!")
             return 0
 
-    def get_map_stop_task(self):
+    def get_map_stop_mapping(self):
         # self.pause_integration = True
         ret = self.get_map()
-        self.stop_task()
+        self.stop_mapping()
         return ret
 
 
-    def pause_task(self):
-        self.pause_mapping = True
+    def pause_mapping(self):
+        self.pause_mapping_flag = True
         return "Mapping paused"
 
     
-    def resume_task(self):
-        self.pause_mapping = False
+    def resume_mapping(self):
+        self.pause_mapping_flag = False
         return "Mapping resumed"
 
 
@@ -212,7 +215,7 @@ class MyServer:
     #         # Get a data packet from the dataset
     #         data_dict = self.my_ds[self.index_queue]  # Access dataset by index
     #         with self.queue_empty:
-    #             if not self.pause_mapping and not self.queue.full():
+    #             if not self.pause_mapping_flag and not self.queue.full():
     #                 self.queue.put(data_dict)
     #                 self.queue_empty.notify()
                 
@@ -357,7 +360,7 @@ class MyServer:
 
                 # Add data to the queue
                 with self.queue_empty:
-                    if not self.pause_mapping and not self.queue.full():
+                    if not self.pause_mapping_flag and not self.queue.full():
                         self.queue.put(data_dict)
                         self.queue_empty.notify()
                 time.sleep(0.1)
