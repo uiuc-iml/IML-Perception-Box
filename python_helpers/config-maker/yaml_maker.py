@@ -6,9 +6,18 @@ import os
 
 app = Flask(__name__)
 
+def get_form_list(prefix, keys, defaults, cast_fn=float):
+    values = []
+    for k, d in zip(keys, defaults):
+        try:
+            val = request.form.get(f'{prefix}_{k}')
+            values.append(cast_fn(val) if val else d)
+        except:
+            values.append(d)
+    return values
+
 @app.route('/')
 def index():
-    # Get supported resolutions and frame rates for ZED and RealSense
     zed_resolutions = ["HD2K", "HD1080", "HD720", "VGA"]
     zed_fps_options = [15, 30, 60, 100]
 
@@ -20,18 +29,15 @@ def index():
                            realsense_resolutions=realsense_resolutions, realsense_formats=realsense_formats,
                            realsense_fps_options=realsense_fps_options)
 
-
 @app.route('/generate_yaml', methods=['POST'])
 def generate_yaml():
     try:
         camera_type = request.form.get('camera_type')
 
-        # SocketPublisher settings
         socket_address = request.form.get('socket_address', '127.0.0.1')
         socket_port = int(request.form.get('socket_port', 7000))
 
         if camera_type == 'ZED':
-            # ZED Camera Configuration
             resolution = request.form.get('zed_resolution')
             fps = request.form.get('zed_fps')
 
@@ -50,7 +56,6 @@ def generate_yaml():
             camera_info = zed.get_camera_information()
             calibration_params = camera_info.camera_configuration.calibration_parameters
 
-            # Generate YAML for ZED
             data = {
                 'Camera': {
                     'name': 'ZED2',
@@ -76,7 +81,6 @@ def generate_yaml():
             zed.close()
 
         elif camera_type == 'RealSense':
-            # RealSense Camera Configuration
             resolution = request.form.get('realsense_resolution')
             width, height = map(int, resolution.split('x'))
             fps = int(request.form.get('realsense_fps'))
@@ -91,7 +95,6 @@ def generate_yaml():
             stream = pipeline_profile.get_stream(rs.stream.color)
             intrinsics = stream.as_video_stream_profile().get_intrinsics()
 
-            # Generate YAML for RealSense
             data = {
                 'Camera': {
                     'name': 'Intel RealSense D435',
@@ -111,37 +114,66 @@ def generate_yaml():
             }
             pipeline.stop()
 
+        elif camera_type == 'Custom':
+            data = {
+                'Camera': {
+                    'name': request.form.get('custom_name', 'Custom Camera'),
+                    'setup': request.form.get('custom_setup', 'monocular'),
+                    'model': request.form.get('custom_model', 'perspective'),
+                    'color_order': request.form.get('custom_color_order', 'RGB'),
+                    'cols': int(request.form.get('custom_cols', 640)),
+                    'rows': int(request.form.get('custom_rows', 480)),
+                    'fps': float(request.form.get('custom_fps', 30)),
+                    'fx': float(request.form.get('custom_fx', 500.0)),
+                    'fy': float(request.form.get('custom_fy', 500.0)),
+                    'cx': float(request.form.get('custom_cx', 320.0)),
+                    'cy': float(request.form.get('custom_cy', 240.0)),
+                    'k1': float(request.form.get('custom_k1', 0.0)),
+                    'k2': float(request.form.get('custom_k2', 0.0)),
+                    'p1': float(request.form.get('custom_p1', 0.0)),
+                    'p2': float(request.form.get('custom_p2', 0.0)),
+                    'k3': float(request.form.get('custom_k3', 0.0)),
+                }
+            }
         else:
             return "Error: Invalid camera type selected."
 
-        # Add StereoRectifier and other configurations
+        # StereoRectifier
+        K_keys = [str(i) for i in range(9)]
+        T_keys = ['x', 'y', 'z']
+        D_keys = [f'd{i}' for i in range(5)]
+
+        stereo_rectifier = {
+            'K_left': get_form_list('K_left', K_keys, [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0]),
+            'K_right': get_form_list('K_right', K_keys, [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0]),
+            'R_left': get_form_list('R_left', K_keys, [1.0]*9),
+            'R_right': get_form_list('R_right', K_keys, [1.0]*9),
+            'T_left': get_form_list('T_left', T_keys, [0.0]*3),
+            'T_right': get_form_list('T_right', T_keys, [119.9004, 0.0, 0.0]),
+            'D_left': get_form_list('D_left', D_keys, [0.0]*5),
+            'D_right': get_form_list('D_right', D_keys, [0.0]*5)
+        }
+
+        # Mapping
+        mapping = {
+            'voxel_size': float(request.form.get('voxel_size', 0.025)),
+            'res': int(request.form.get('res', 8)),
+            'n_labels': int(request.form.get('n_labels', 150)),
+            'depth_scale': float(request.form.get('depth_scale', 1000.0)),
+            'depth_max': float(request.form.get('depth_max', 5.0)),
+            'miu': float(request.form.get('miu', 0.001)),
+            'truncation_vsize_multiple': int(request.form.get('truncation_vsize_multiple', 8))
+        }
+
         data.update({
-            'StereoRectifier': {
-                'K_left': [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0],
-                'K_right': [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0],
-                'R_left': [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
-                'R_right': [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
-                'T_left': [0.0, 0.0, 0.0],
-                'T_right': [119.9004, 0.0, 0.0],
-                'D_left': [0.0, 0.0, 0.0, 0.0, 0.0],
-                'D_right': [0.0, 0.0, 0.0, 0.0, 0.0]
-            },
+            'StereoRectifier': stereo_rectifier,
             'SocketPublisher': {
                 'address': socket_address,
                 'port': socket_port
             },
-            'Mapping': {
-                'voxel_size': 0.025,
-                'res': 8,
-                'n_labels': 150,
-                'depth_scale': 1000.0,
-                'depth_max': 5.0,
-                'miu': 0.001,
-                'truncation_vsize_multiple': 8
-            }
+            'Mapping': mapping
         })
 
-        # Save YAML file
         yaml_file = os.path.join(os.getcwd(), 'camera_config.yaml')
         with open(yaml_file, 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
@@ -150,7 +182,6 @@ def generate_yaml():
 
     except Exception as e:
         return f"Error while generating YAML: {e}"
-
 
 if __name__ == '__main__':
     app.run(debug=True)
