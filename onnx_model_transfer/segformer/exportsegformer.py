@@ -133,7 +133,9 @@ class Segformer_torchnn(nn.Module):
         self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
         self.target_size = (512, 512)
 
+
     def forward(self, x):
+        x = x.permute(2, 0, 1).unsqueeze(0).float()
         orig_h, orig_w = x.shape[2], x.shape[3]
 
         x = x / 255.0
@@ -153,7 +155,7 @@ segmenter = SegformerSegmenter()
 segmenter2 = Segformer_torchnn().eval()
 model = Segformer_torchnn().eval()
 
-dummy_input = torch.randint(0, 256, (1, 3, 720, 1280), dtype=torch.float32)
+dummy_input = torch.randint(0, 256, (720, 1280, 3), dtype=torch.uint8)
 
 torch.onnx.export(
     model,
@@ -162,7 +164,7 @@ torch.onnx.export(
     input_names=["rgb"],
     output_names=["probs"],
     dynamic_axes={
-        "rgb": {0: "batch", 2: "height", 3: "width"},
+        "rgb": {0: "width", 1: "height"},
         "probs": {0: "height", 1: "width", 2: "classes"},
     },
     opset_version=12
@@ -174,18 +176,19 @@ import numpy as np
 import torch
 import cv2
 
-img = cv2.imread("test/scene.jpg")
+img = cv2.imread("../test/scene.jpg")
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 pred1 = segmenter.classify(img)
 print(img.shape)
-img_tensor = torch.tensor(img.transpose(2, 0, 1)).unsqueeze(0).float()  
+# img_tensor = torch.tensor(img.transpose(2, 0, 1)).unsqueeze(0).float()  
+img_tensor = torch.tensor(img)
 with torch.no_grad():
     pred2 = segmenter2(img_tensor)
 
 
 ort_session = ort.InferenceSession("segformer_preprocessed.onnx", providers=["CPUExecutionProvider"])
-ort_inputs = {"rgb": img_tensor.numpy()}
+ort_inputs = {"rgb": img}
 ort_outputs = ort_session.run(None, ort_inputs)
 pred3 = ort_outputs[0].squeeze()  # [H, W] after argmax
 print(pred3.shape)
