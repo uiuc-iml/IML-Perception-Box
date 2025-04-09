@@ -125,7 +125,7 @@ def get_indices_from_points(voxel_grid,points,res = 8,voxel_size = 0.025,device 
 
 class Reconstruction:
 
-    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CPU:0'),miu = 0.001):
+    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CPU:0'),miu = 0.001, init_blocks=17500):
         """Initializes the TSDF reconstruction pipeline using voxel block grids, ideally using a GPU device for efficiency. 
 
         Args:
@@ -148,6 +148,7 @@ class Reconstruction:
         self.semantic_integration = self.n_labels is not None
         self.miu = miu
         self.trunc = self.voxel_size * trunc_multiplier
+        self.init_blocks = init_blocks
         try:
             self.initialize_vbg()
         except Exception as e:
@@ -174,23 +175,23 @@ class Reconstruction:
             self.vbg = o3d.t.geometry.VoxelBlockGrid(
             ('tsdf', 'weight', 'color'),
             (o3c.float32, o3c.float32, o3c.float32), ((1), (1), (3)),
-            self.voxel_size,self.res, 20000, self.device)
+            self.voxel_size,self.res, self.init_blocks, self.device)
         elif((self.integrate_color == False) and (self.n_labels is not None)):
             self.vbg = o3d.t.geometry.VoxelBlockGrid(
             ('tsdf', 'weight', 'label'),
             (o3c.float32, o3c.float32, o3c.float32), ((1), (1), (self.n_labels)),
-            self.voxel_size,self.res, 20000, self.device)
+            self.voxel_size,self.res, self.init_blocks, self.device)
         elif((self.integrate_color) and (self.n_labels is not None)):
             self.vbg = o3d.t.geometry.VoxelBlockGrid(
             ('tsdf', 'weight','color','label'),
             (o3c.float32, o3c.float32, o3c.float32,o3c.float32), ((1), (1),(3),(self.n_labels)),
-            self.voxel_size,self.res, 20000, self.device)
+            self.voxel_size,self.res, self.init_blocks, self.device)
         else:
             print('No color or Semantics')
             self.vbg = o3d.t.geometry.VoxelBlockGrid(
             ('tsdf', 'weight'),
             (o3c.float32, o3c.float32), ((1), (1)),
-            self.voxel_size,self.res, 20000, self.device)
+            self.voxel_size,self.res, self.init_blocks, self.device)
 
 
     def update_vbg(self,depth,intrinsic,pose,color = None,semantic_label = None, scene = None):

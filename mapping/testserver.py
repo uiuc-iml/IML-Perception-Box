@@ -133,6 +133,9 @@ class MyServer:
             self.pause_mapping_flag = False
             self.pause_integration = False
             # Start mapping and queue threads
+            self.voxel_size = voxel_size
+            self.res = res
+            self.init_blocks = initial_num_blocks
             self.segmenter = None
             if(integrate_semantics):
                 num_labels = self.n_labels
@@ -148,6 +151,7 @@ class MyServer:
                 voxel_size=self.voxel_size,
                 n_labels=num_labels,
                 integrate_color=color,
+                init_blocks=self.init_blocks
             )
             self.task_thread = threading.Thread(target=self.mapping, daemon=True)
             self.queue_thread = threading.Thread(target=self.fill_queue_from_socket, daemon=True)
