@@ -11,6 +11,7 @@ import yaml
 import socket
 import struct
 import cv2
+import onnxruntime as ort 
 
 
 # parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -32,7 +33,7 @@ class MyServer:
         self.server.register_function(self.resume_mapping)
         self.server.register_function(self.get_map_stop_mapping)
         self.server.register_function(self.get_metric_map)
-
+        self.server.register_function(self.load_segmentation_model)
         self.task_thread = None
         self.queue_thread = None
         self.task_running = False
@@ -52,13 +53,30 @@ class MyServer:
         self.index_queue = 0
         self.index_reconstruction = 0
         self.queue = queue.Queue(maxsize=2000)  # Thread-safe queue
+        self.onnx = False
         self.load_config()
 
 
-        
-        
 
+    def load_segmentation_model(self, binary_data):
+        try:
+            with open("received_model.onnx", "wb") as f:
+                f.write(binary_data.data)
 
+            self.ort_session = ort.InferenceSession("received_model.onnx", providers=["CPUExecutionProvider"])
+
+            input_names = [inp.name for inp in self.ort_session.get_inputs()]
+            output_names = [out.name for out in self.ort_session.get_outputs()]
+            print("ONNX model inputs:", input_names)
+            print("ONNX model outputs:", output_names)
+
+            return f"Model loaded. Inputs: {input_names}, Outputs: {output_names}"
+
+        except Exception as e:
+            print("Failed to load ONNX model:", str(e))
+            return f"Error: {str(e)}"
+
+        
     def load_config(self):
         # Read configuration values from the YAML file
         # config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
@@ -109,7 +127,7 @@ class MyServer:
         print(f"Configuration Loaded: {config}")
 
 
-    def start_mapping(self, integrate_semantics=True, color=False):
+    def start_mapping(self, integrate_semantics=True, color=False, voxel_size=0.05, res=8, initial_num_blocks=17500):
         if not self.task_running:
             self.task_running = True
             self.pause_mapping_flag = False
@@ -118,7 +136,8 @@ class MyServer:
             self.segmenter = None
             if(integrate_semantics):
                 num_labels = self.n_labels
-                self.segmenter = MaskformerSegmenter()
+                if(not self.onnx):
+                    self.segmenter = MaskformerSegmenter()
             else:
                 num_labels = None
 
@@ -153,6 +172,9 @@ class MyServer:
             with self.vbg_access_lock:
                 del self.rec
                 del self.segmenter
+                del self.ort_session
+                self.ort_session = None
+                self.onnx = False
                 self.segmenter = None
                 self.rec = None
                 self.index_queue = 0
@@ -279,7 +301,7 @@ class MyServer:
                 depth_img_size = struct.unpack('!I', data)[0]  # Network byte order
                 print(f"Depth image size: {depth_img_size} bytes")
 
-                # Step 4: Receive the depth image data if size > 0
+                # Receive the depth image data if size > 0
                 depth_image_data = b''
                 if depth_img_size > 0:
                     while len(depth_image_data) < depth_img_size:
@@ -329,7 +351,7 @@ class MyServer:
                 else:
                     depth_frame = None
 
-                # Step 7: Decode the pose data
+                # Decode the pose data
                 pose_array = np.frombuffer(pose_data, dtype='<d')  # Assuming little-endian doubles
                 if pose_array.size != 16:
                     print(f"Pose data size mismatch. Expected 16 elements, got {pose_array.size}")
@@ -404,9 +426,17 @@ class MyServer:
 
     def update_rec(self, rgb, depth, pose, intrinsics):
         # Perform segmentation and update reconstruction
-        semantic_label = self.segmenter.get_pred_probs(
+        if(not self.onnx):
+            semantic_label = self.segmenter.get_pred_probs(
             rgb, depth, x=depth.shape[0], y=depth.shape[1]
         )
+        else:
+            ort_inputs = {
+            "rgb": rgb,
+            "depth": depth
+            }
+            semantic_label = self.ort_session.run(None, ort_inputs)
+
         print(pose)
         self.rec.update_vbg(
             depth,
