@@ -24,7 +24,7 @@ from segmentation_model_loader import MaskformerSegmenter
 class MyServer:
     def __init__(self):
         # Set up the XML-RPC server
-        self.server = xmlrpc.server.SimpleXMLRPCServer(('10.192.142.59', 5001))
+        self.server = xmlrpc.server.SimpleXMLRPCServer(('172.16.204.164', 5003))
         self.server.register_introspection_functions()
         self.server.register_function(self.start_mapping)
         self.server.register_function(self.stop_mapping)
@@ -53,8 +53,10 @@ class MyServer:
         self.index_queue = 0
         self.index_reconstruction = 0
         self.queue = queue.Queue(maxsize=2000)  # Thread-safe queue
-        self.onnx = False
+        self.onnx = True
         self.load_config()
+        self.ort_session = ort.InferenceSession("received_model.onnx", providers=["CPUExecutionProvider"])
+
 
 
 
@@ -69,7 +71,7 @@ class MyServer:
             output_names = [out.name for out in self.ort_session.get_outputs()]
             print("ONNX model inputs:", input_names)
             print("ONNX model outputs:", output_names)
-
+            self.onnx = True
             return f"Model loaded. Inputs: {input_names}, Outputs: {output_names}"
 
         except Exception as e:
@@ -93,7 +95,7 @@ class MyServer:
         # self.depth_max = config.get('depth_max', 5.0)
         # self.miu = config.get('miu', 0.001)
 
-        yaml_file_path = 'Yaml-files/realsense.yaml'
+        yaml_file_path = '../Yaml-files/zed.yaml'
 
         # Read the camera YAML file
         with open(yaml_file_path, 'r') as file:
@@ -210,7 +212,7 @@ class MyServer:
 
     def mapping(self):
         while self.task_running and not self.pause_integration:
-            # print("Checking queue...")  # Added for debugging
+            print("Checking queue...")  # Added for debugging
             with self.queue_empty:
                 while self.queue.empty():
                     print("waiting for frames")
@@ -276,7 +278,7 @@ class MyServer:
                     break
                 # Unpack color image size
                 color_img_size = struct.unpack('!I', data)[0]  # Network byte order
-                print(f"Color image size: {color_img_size} bytes")
+                # print(f"Color image size: {color_img_size} bytes")
 
                 # Step 2: Receive the color image data
                 color_image_data = b''
@@ -303,7 +305,7 @@ class MyServer:
                     break
                 # Unpack depth image size
                 depth_img_size = struct.unpack('!I', data)[0]  # Network byte order
-                print(f"Depth image size: {depth_img_size} bytes")
+                # print(f"Depth image size: {depth_img_size} bytes")
 
                 # Receive the depth image data if size > 0
                 depth_image_data = b''
@@ -361,8 +363,8 @@ class MyServer:
                     print(f"Pose data size mismatch. Expected 16 elements, got {pose_array.size}")
                     continue
                 pose_matrix = pose_array.reshape((4, 4))
-                print("Pose Matrix:")
-                print(pose_matrix)
+                # print("Pose Matrix:")
+                # print(pose_matrix)
                 if pose_matrix[3,3] == 0:
                     print(f"Invalid Pose! Skipping frame")
                     continue
@@ -373,10 +375,10 @@ class MyServer:
                 if depth_frame is not None:
                     cv2.imshow("Depth Frame", depth_frame)
                 intrinsics = self.K
-                print("Intrensic Matrix:")
-                print(intrinsics)
-                print(type(color_frame))
-                print(type(depth_frame))
+                # print("Intrensic Matrix:")
+                # print(intrinsics)
+                # print(type(color_frame))
+                # print(type(depth_frame))
                 data_dict = {
                 'color': color_frame,
                 'depth': depth_frame,
@@ -389,7 +391,7 @@ class MyServer:
                     if not self.pause_mapping_flag and not self.queue.full():
                         self.queue.put(data_dict)
                         self.queue_empty.notify()
-                time.sleep(0.1)
+                time.sleep(0.2)
 
         except Exception as e:
             print(f"Error in socket client: {e}")
@@ -430,16 +432,25 @@ class MyServer:
 
     def update_rec(self, rgb, depth, pose, intrinsics):
         # Perform segmentation and update reconstruction
-        if(not self.onnx):
+        if not self.onnx:
             semantic_label = self.segmenter.get_pred_probs(
             rgb, depth, x=depth.shape[0], y=depth.shape[1]
         )
         else:
+            print("Here")
+            print(rgb.shape)
+            print(depth.shape)
+            target_shape = (480,640)
+            rgb = cv2.resize(rgb, (target_shape[1], target_shape[0]))
+            depth = cv2.resize(depth, (target_shape[1], target_shape[0]))
+            depth = depth.astype(np.float32)
             ort_inputs = {
             "rgb": rgb,
             "depth": depth
             }
             semantic_label = self.ort_session.run(None, ort_inputs)
+            print(semantic_label[0].shape)
+            semantic_label = np.eye(21)[semantic_label[0]]
 
         print(pose)
         self.rec.update_vbg(
