@@ -34,6 +34,10 @@ def visualize_point_cloud_color(points, colors):
 def main():
    # Connect to the server
    server = xmlrpc.client.ServerProxy("http://10.192.142.59:5001")
+   with open("onnx_model_transfer/ESANET/esanet_with_preproc.onnx", "rb") as f:
+      model_data = f.read()
+   # send model as a binary using load_segmentation_model()
+   response = server.load_segmentation_model(xmlrpc.client.Binary(model_data))
 
    # Start the task
    print(server.start_task())
