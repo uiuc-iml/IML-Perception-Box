@@ -21,7 +21,7 @@ Mapping:
   depth_max: 5.0
   depth_scale: 1000.0
   miu: 0.001
-  n_labels: 150
+  n_labels: 21
   res: 8
   truncation_vsize_multiple: 8
   voxel_size: 0.025
