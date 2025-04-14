@@ -33,46 +33,54 @@ def visualize_point_cloud_color(points, colors):
 
 def main():
    # Connect to the server
-   server = xmlrpc.client.ServerProxy("http://10.192.142.59:5001")
-   with open("onnx_model_transfer/ESANET/esanet_with_preproc.onnx", "rb") as f:
-      model_data = f.read()
-   # send model as a binary using load_segmentation_model()
-   response = server.load_segmentation_model(xmlrpc.client.Binary(model_data))
-
+   server = xmlrpc.client.ServerProxy("http://172.16.204.164:5003")
+   # with open("onnx_model_transfer/ESANET/esanet_with_preproc.onnx", "rb") as f:
+   #    model_data = f.read()
+   # # send model as a binary using load_segmentation_model()
+   # response = server.load_segmentation_model(xmlrpc.client.Binary(model_data))
+   # print(response)
    # Start the task
-   print(server.start_task())
+   print(server.start_mapping())
 
 
    # Wait for mapping to process data
-   time.sleep(60)  #
+   # time.sleep(90)  #
+   while True:
+    key = input("q to stop mapping")
+    if key:
+        if key.lower() == 'q':
+            print("User chose to quit.")
+            break
+
    # server.pause_task()
    # time.sleep(50)
    # server.resume_task()
    # time.sleep(50)
    # Get the map
    time_begin = time.time()
-   map_data = server.get_metric_map()
+   map_data = server.get_semantic_map()
    time_end = time.time()
    
    
    # Stop the task
-   print(server.stop_task())
+   print(server.stop_mapping())
    print(f"time to transmit the map:{time_end - time_begin}")
    print(type(map_data['points']))
 
-   points = np.array(map_data['points'])
-   colors = np.array(map_data['colors'])
-   visualize_point_cloud_color(points, colors)
+   # points = np.array(map_data['points'])
+   # colors = np.array(map_data['colors'])
+   # visualize_point_cloud_color(points, colors)
    # Extract points and labels
    points = np.array(map_data['points'])
    labels = np.array(map_data['labels'])
    print(points.shape)
    print(labels.shape)
    # labels = np.argmax(labels, axis=1)
-   print(labels.shape)
+   print(labels[0:100])
+   print(labels[1200:1300])
    # Visualize the point cloud with labels
-   n_labels = 150  # Replace with the correct number of labels used in your reconstruction
-   # visualize_point_cloud(points, labels, n_labels)
+   n_labels = 21  # Replace with the correct number of labels used in your reconstruction
+   visualize_point_cloud(points, labels, n_labels)
    # visualize_point_cloud_color()
 
 if __name__ == "__main__":
