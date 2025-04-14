@@ -1,0 +1,36 @@
+%YAML:1.0
+#INITIALIZATION PARAMETERS
+autoInitialize: 0
+roundOnAutoInitialize: 1
+initialPositionSigma: 1e-01
+initialRollPitchSigma: 0.11
+initialYawSigma: 0.13
+initialVelocitySigma: 0.15
+initialAccBiasSigma: 0.17
+initialGyroBiasSigma: 11
+#VISION PARAMETERS
+linearizationMode: 3
+degeneracyMode: 2
+smartNoiseSigma: 5
+rankTolerance: 2.1
+landmarkDistanceThreshold: 10.2
+outlierRejection: 3.2
+retriangulationThreshold: 0.1
+relinearizeThreshold: 0.0001
+addBetweenStereoFactors: 1
+betweenRotationPrecision: 1.11
+betweenTranslationPrecision: 2.22
+#OPTIMIZATION PARAMETERS
+relinearizeSkip: 12
+zero_velocity_precision: 1.1
+no_motion_position_precision: 1.2
+no_motion_rotation_precision: 1.3
+constant_vel_precision: 1.4
+numOptimize: 0
+nr_states: 2 # number of nodes in horizon.
+wildfire_threshold: 0.001
+useDogLeg: 1
+
+# Method used to generate the initial guess for the pose of the keyframe
+pose_guess_source: 0
+mono_translation_scale_factor: 0.1
