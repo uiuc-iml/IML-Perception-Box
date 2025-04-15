@@ -68,7 +68,9 @@ def main():
    print(type(map_data['points']))
 
    points = np.array(map_data['points'])
-   colors = np.array(map_data['colors'])
+   colors = np.array(map_data['colors'])/256.0
+   print(colors.shape)
+   print(colors[0:50])
    visualize_point_cloud_color(points, colors)
    # Extract points and labels
    # points = np.array(map_data['points'])
