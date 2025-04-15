@@ -24,7 +24,7 @@ from segmentation_model_loader import MaskformerSegmenter
 class MyServer:
     def __init__(self):
         # Set up the XML-RPC server
-        self.server = xmlrpc.server.SimpleXMLRPCServer(('172.16.204.164', 5003))
+        self.server = xmlrpc.server.SimpleXMLRPCServer(('10.192.251.78', 5003))
         self.server.register_introspection_functions()
         self.server.register_function(self.start_mapping)
         self.server.register_function(self.stop_mapping)

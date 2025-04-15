@@ -455,7 +455,7 @@ class Reconstruction:
         pcd = pcd.to_legacy()
         sm = nn.Softmax(dim = 1)
         target_points = np.asarray(pcd.points)
-        if(self.semantic_integration):
+        if(self.integrate_color):
             colors,coords = get_properties(self.vbg,target_points,'color',res = self.res,voxel_size = self.voxel_size,device = self.device)
             colors = colors.cpu().numpy().astype(np.float64)
             if colors is not None:
