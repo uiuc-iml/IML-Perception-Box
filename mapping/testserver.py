@@ -129,7 +129,7 @@ class MyServer:
         print(f"Configuration Loaded: {config}")
 
 
-    def start_mapping(self, integrate_semantics=True, color=False, voxel_size=0.05, res=8, initial_num_blocks=17500):
+    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500):
         if not self.task_running:
             self.task_running = True
             self.pause_mapping_flag = False
@@ -139,6 +139,7 @@ class MyServer:
             self.res = res
             self.init_blocks = initial_num_blocks
             self.segmenter = None
+            self.semantics = integrate_semantics
             if(integrate_semantics):
                 num_labels = self.n_labels
                 if(not self.onnx):
@@ -432,25 +433,26 @@ class MyServer:
 
     def update_rec(self, rgb, depth, pose, intrinsics):
         # Perform segmentation and update reconstruction
-        if not self.onnx:
-            semantic_label = self.segmenter.get_pred_probs(
-            rgb, depth, x=depth.shape[0], y=depth.shape[1]
-        )
-        else:
-            print("Here")
-            print(rgb.shape)
-            print(depth.shape)
-            target_shape = (480,640)
-            rgb = cv2.resize(rgb, (target_shape[1], target_shape[0]))
-            depth = cv2.resize(depth, (target_shape[1], target_shape[0]))
-            depth = depth.astype(np.float32)
-            ort_inputs = {
-            "rgb": rgb,
-            "depth": depth
-            }
-            semantic_label = self.ort_session.run(None, ort_inputs)
-            print(semantic_label[0].shape)
-            semantic_label = np.eye(21)[semantic_label[0]]
+        if self.semantics:
+            if not self.onnx:
+                semantic_label = self.segmenter.get_pred_probs(
+                rgb, depth, x=depth.shape[0], y=depth.shape[1]
+            )
+            else:
+                print("Here")
+                print(rgb.shape)
+                print(depth.shape)
+                target_shape = (480,640)
+                rgb = cv2.resize(rgb, (target_shape[1], target_shape[0]))
+                depth = cv2.resize(depth, (target_shape[1], target_shape[0]))
+                depth = depth.astype(np.float32)
+                ort_inputs = {
+                "rgb": rgb,
+                "depth": depth
+                }
+                semantic_label = self.ort_session.run(None, ort_inputs)
+                print(semantic_label[0].shape)
+                semantic_label = np.eye(21)[semantic_label[0]]
 
         print(pose)
         self.rec.update_vbg(

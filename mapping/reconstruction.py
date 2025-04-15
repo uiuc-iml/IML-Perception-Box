@@ -463,7 +463,6 @@ class Reconstruction:
                     return pcd,colors
                 else:
                     colors = colors
-                    colors = sm(torch.from_numpy(colors)).numpy()
                     return pcd,colors
             else:
                 return None,None
