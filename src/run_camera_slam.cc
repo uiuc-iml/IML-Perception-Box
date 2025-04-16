@@ -2941,19 +2941,18 @@ int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::syste
                 send(sock, buf.data(), size, 0);
 
                 // Transmit depth frame as PNG
+                // Transmit depth frame with full 16-bit precision
                 if (!depth_local.empty()) {
-                    // Normalize depth image for visualization
-                    cv::Mat depth_normalized;
-                    double minVal, maxVal;
-                    cv::minMaxLoc(depth_local, &minVal, &maxVal);
-                    depth_local.convertTo(depth_normalized, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
-
-                    // Encode depth image
+                    // Convert depth image to PNG without normalizing (preserve 16-bit depth)
+                    std::vector<int> compression_params;
+                    compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+                    compression_params.push_back(3);  // Medium compression level
+                    
                     std::vector<uchar> depth_buf;
-                    cv::imencode(".png", depth_normalized, depth_buf);
+                    cv::imencode(".png", depth_local, depth_buf, compression_params);
                     int depth_size = depth_buf.size();
                     int32_t depth_net_size = htonl(depth_size);
-
+                    
                     send(sock, &depth_net_size, sizeof(depth_net_size), 0);
                     send(sock, depth_buf.data(), depth_size, 0);
                 } else {
@@ -2961,8 +2960,7 @@ int mono_tracking_realsense_pose_depth(const std::shared_ptr<stella_vslam::syste
                     int32_t depth_net_size = htonl(0);
                     send(sock, &depth_net_size, sizeof(depth_net_size), 0);
                 }
-
-                // Always transmit pose data
+                                // Always transmit pose data
                 double pose_data[16];
                 if (has_pose_local) {
                     std::memcpy(pose_data, pose_local.data(), sizeof(pose_data));

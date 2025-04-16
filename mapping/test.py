@@ -8,7 +8,7 @@ if torch.cuda.is_available():
 else:
     print("CUDA not available.")
 
-import open3d as o3d
+import testopen3d as o3d
 
 if o3d.core.cuda.is_available():
     print("CUDA is enabled for Open3D!")

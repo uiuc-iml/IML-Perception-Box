@@ -24,7 +24,7 @@ from segmentation_model_loader import MaskformerSegmenter
 class MyServer:
     def __init__(self):
         # Set up the XML-RPC server
-        self.server = xmlrpc.server.SimpleXMLRPCServer(('10.192.251.78', 5003))
+        self.server = xmlrpc.server.SimpleXMLRPCServer(('192.168.10.196', 5003))
         self.server.register_introspection_functions()
         self.server.register_function(self.start_mapping)
         self.server.register_function(self.stop_mapping)
@@ -55,7 +55,7 @@ class MyServer:
         self.queue = queue.Queue(maxsize=2000)  # Thread-safe queue
         self.onnx = True
         self.load_config()
-        self.ort_session = ort.InferenceSession("received_model.onnx", providers=["CPUExecutionProvider"])
+        self.ort_session = ort.InferenceSession("received_model.onnx", providers=["CUDAExecutionProvider"])
 
 
 
@@ -95,7 +95,7 @@ class MyServer:
         # self.depth_max = config.get('depth_max', 5.0)
         # self.miu = config.get('miu', 0.001)
 
-        yaml_file_path = '../Yaml-files/zed.yaml'
+        yaml_file_path = '../Yaml-files/realsense.yaml'
 
         # Read the camera YAML file
         with open(yaml_file_path, 'r') as file:
@@ -347,10 +347,14 @@ class MyServer:
                     if(self.name == "ZED2"):
                         print("ZED2")
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                        print(depth_frame.shape)
+                        print(depth_frame[:,0:20])
                     else:
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-                        scaling_factor = 256  # Adjust based on the sender's scaling logic
-                        depth_frame = (depth_frame.astype(np.uint16)) * scaling_factor
+                        depth_frame = depth_frame.astype(np.float32)
+                        print(depth_frame.shape)
+                        print(np.max(depth_frame, axis=1))
+    
                     
                     if depth_frame is None:
                         print("Failed to decode depth image")
@@ -433,6 +437,7 @@ class MyServer:
 
     def update_rec(self, rgb, depth, pose, intrinsics):
         # Perform segmentation and update reconstruction
+        semantic_label = None
         if self.semantics:
             if not self.onnx:
                 semantic_label = self.segmenter.get_pred_probs(

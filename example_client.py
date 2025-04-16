@@ -1,7 +1,7 @@
 import xmlrpc.client
 import time
 import numpy as np
-import open3d as o3d
+import testopen3d as o3d
 
 def random_color_mapping(n_labels):
    """Generate random colors for labels."""

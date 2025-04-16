@@ -1,4 +1,4 @@
-# Install script for directory: /home/motion/Perception-Box
+# Install script for directory: /home/trvise/IML-Perception-Box
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/motion/Perception-Box/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/trvise/IML-Perception-Box/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

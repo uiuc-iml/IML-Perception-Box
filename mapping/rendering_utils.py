@@ -1,5 +1,5 @@
 import numpy as np
-import open3d as o3d
+import testopen3d as o3d
 import open3d.core as o3c
 from klampt.math import se3
 
