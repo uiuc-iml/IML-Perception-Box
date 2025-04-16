@@ -20,7 +20,6 @@ import nvidia_smi
 
 
 
-
 gpu_memory_usage = []
 
 def get_gpu_memory_usage():
