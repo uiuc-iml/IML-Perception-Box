@@ -398,7 +398,7 @@ class Reconstruction:
         # Initialize unobserved voxels with uniform prior directly on GPU
         zero_weight_mask = weight[valid_voxel_indices].flatten() == 0
         if zero_weight_mask.any():
-            uniform_prior = torch.log(torch.tensor([1.0 / self.n_labels], dtype=torch.float32, device='cpu'))
+            uniform_prior = torch.log(torch.tensor([1.0 / self.n_labels], dtype=torch.float32, device='cuda'))
             semantic[valid_voxel_indices[zero_weight_mask]] += o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(uniform_prior))
 
         # Bayesian update directly in log space on the GPU

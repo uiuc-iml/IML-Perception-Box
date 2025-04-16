@@ -129,7 +129,7 @@ class MyServer:
         print(f"Configuration Loaded: {config}")
 
 
-    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500):
+    def start_mapping(self, integrate_semantics=True, color=False, voxel_size=0.05, res=8, initial_num_blocks=17500):
         if not self.task_running:
             self.task_running = True
             self.pause_mapping_flag = False
@@ -352,8 +352,8 @@ class MyServer:
                     else:
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                         depth_frame = depth_frame.astype(np.float32)
-                        print(depth_frame.shape)
-                        print(np.max(depth_frame, axis=1))
+                        # print(depth_frame.shape)
+                        # print(np.max(depth_frame, axis=1))
     
                     
                     if depth_frame is None:
