@@ -12,6 +12,7 @@ import socket
 import struct
 import cv2
 import onnxruntime as ort 
+import glob
 
 
 # parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -34,6 +35,8 @@ class MyServer:
         self.server.register_function(self.get_map_stop_mapping)
         self.server.register_function(self.get_metric_map)
         self.server.register_function(self.load_segmentation_model)
+        self.server.register_function(self.list_onnx_models)
+        self.server.register_function(self.delete_onnx_model)
         self.task_thread = None
         self.queue_thread = None
         self.task_running = False
@@ -43,11 +46,6 @@ class MyServer:
         self.queue_empty = threading.Condition()
 
         # Dataset parameters
-        root_dir = "/home/motion/Data/scannet_v2"
-        scene = "scene0343_00"  
-        lim = -1
-        # self.my_ds = scannet_scene_reader(root_dir, scene, lim=lim, disable_tqdm=True)
-        # self.total_len = len(self.my_ds)
 
         # Initialize queue and indices
         self.index_queue = 0
@@ -55,30 +53,49 @@ class MyServer:
         self.queue = queue.Queue(maxsize=2000)  # Thread-safe queue
         self.onnx = True
         self.load_config()
-        self.ort_session = ort.InferenceSession("received_model.onnx", providers=["CUDAExecutionProvider"])
+        
 
 
 
-
-    def load_segmentation_model(self, binary_data):
+    def load_segmentation_model(self, name, binary_data):
         try:
-            with open("received_model.onnx", "wb") as f:
+            os.makedirs("onnx_models", exist_ok=True)
+            model_path = f"onnx_models/{name}.onnx"
+
+            with open(model_path, "wb") as f:
                 f.write(binary_data.data)
 
-            self.ort_session = ort.InferenceSession("received_model.onnx", providers=["CPUExecutionProvider"])
-
-            input_names = [inp.name for inp in self.ort_session.get_inputs()]
-            output_names = [out.name for out in self.ort_session.get_outputs()]
-            print("ONNX model inputs:", input_names)
-            print("ONNX model outputs:", output_names)
-            self.onnx = True
-            return f"Model loaded. Inputs: {input_names}, Outputs: {output_names}"
+            # Optional: sanity check load
+            ort_session = ort.InferenceSession(model_path, providers=["CUDAExecutionProvider"])
+            inputs = [i.name for i in ort_session.get_inputs()]
+            outputs = [o.name for o in ort_session.get_outputs()]
+            print(f"Model '{name}' loaded. Inputs: {inputs}, Outputs: {outputs}")
+            return f"Model '{name}' stored and verified."
 
         except Exception as e:
-            print("Failed to load ONNX model:", str(e))
-            return f"Error: {str(e)}"
+            print(f"Failed to load model '{name}': {e}")
+            return f"Error: {e}"
 
-        
+    def list_onnx_models(self):
+        try:
+            os.makedirs("onnx_models", exist_ok=True)
+            model_files = glob.glob("onnx_models/*.onnx")
+            model_names = [os.path.splitext(os.path.basename(m))[0] for m in model_files]
+            return model_names
+        except Exception as e:
+            return f"Error listing models: {e}"
+
+    def delete_onnx_model(self, name):
+        try:
+            model_path = f"onnx_models/{name}.onnx"
+            if os.path.exists(model_path):
+                os.remove(model_path)
+                return f"Model '{name}' deleted."
+            else:
+                return f"Model '{name}' not found."
+        except Exception as e:
+            return f"Error deleting model '{name}': {e}"
+
     def load_config(self):
         # Read configuration values from the YAML file
         # config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
@@ -129,7 +146,11 @@ class MyServer:
         print(f"Configuration Loaded: {config}")
 
 
+<<<<<<< Updated upstream
     def start_mapping(self, integrate_semantics=True, color=False, voxel_size=0.05, res=8, initial_num_blocks=17500):
+=======
+    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None):
+>>>>>>> Stashed changes
         if not self.task_running:
             self.task_running = True
             self.pause_mapping_flag = False
@@ -142,8 +163,15 @@ class MyServer:
             self.semantics = integrate_semantics
             if(integrate_semantics):
                 num_labels = self.n_labels
-                if(not self.onnx):
+                if(not onnx_model_name):
                     self.segmenter = MaskformerSegmenter()
+                else:
+                    model_path = f"onnx_models/{onnx_model_name}.onnx"
+                    if not os.path.exists(model_path):
+                        self.task_running = False
+                        return f"Error: ONNX model '{onnx_model_name}' not found."
+                    self.onnx = True
+                    self.ort_session = ort.InferenceSession(model_path, providers=["CUDAExecutionProvider"])
             else:
                 num_labels = None
 
