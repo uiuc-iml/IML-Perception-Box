@@ -146,11 +146,7 @@ class MyServer:
         print(f"Configuration Loaded: {config}")
 
 
-<<<<<<< Updated upstream
-    def start_mapping(self, integrate_semantics=True, color=False, voxel_size=0.05, res=8, initial_num_blocks=17500):
-=======
     def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None):
->>>>>>> Stashed changes
         if not self.task_running:
             self.task_running = True
             self.pause_mapping_flag = False
@@ -377,6 +373,41 @@ class MyServer:
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                         print(depth_frame.shape)
                         print(depth_frame[:,0:20])
+                        if depth_frame.dtype != np.float32:
+                            depth_frame = depth_frame.astype(np.float32) / 1000.0 
+
+                        depth_o3d = o3d.geometry.Image(depth_frame)
+                        color_o3d = o3d.geometry.Image(cv2.cvtColor(color_frame, cv2.COLOR_BGR2RGB))
+
+                        # Create RGBD image
+                        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+                            color_o3d,
+                            depth_o3d,
+                            depth_scale=1.0,              # Already scaled to meters
+                            depth_trunc=5.0,
+                            convert_rgb_to_intensity=False
+                        )
+
+                        intrinsics = o3d.camera.PinholeCameraIntrinsic(
+                            width=1280,
+                            height=720,
+                            fx=523.2045,
+                            fy=523.2045,
+                            cx=645.2405,
+                            cy=369.2390
+                        )
+
+                        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
+                            rgbd, intrinsic=intrinsics
+                        )
+
+                        pcd.transform([[1, 0, 0, 0],
+                                    [0, -1, 0, 0],
+                                    [0, 0, -1, 0],
+                                    [0, 0, 0, 1]])
+
+                        o3d.visualization.draw_geometries([pcd])
+
                     else:
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                         depth_frame = depth_frame.astype(np.float32)
