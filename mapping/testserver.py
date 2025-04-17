@@ -24,7 +24,7 @@ from segmentation_model_loader import MaskformerSegmenter
 class MyServer:
     def __init__(self):
         # Set up the XML-RPC server
-        self.server = xmlrpc.server.SimpleXMLRPCServer(('192.168.10.196', 5003))
+        self.server = xmlrpc.server.SimpleXMLRPCServer(('172.16.244.187', 5003))
         self.server.register_introspection_functions()
         self.server.register_function(self.start_mapping)
         self.server.register_function(self.stop_mapping)
@@ -95,7 +95,7 @@ class MyServer:
         # self.depth_max = config.get('depth_max', 5.0)
         # self.miu = config.get('miu', 0.001)
 
-        yaml_file_path = '../Yaml-files/realsense.yaml'
+        yaml_file_path = '../Yaml-files/zed.yaml'
 
         # Read the camera YAML file
         with open(yaml_file_path, 'r') as file:
