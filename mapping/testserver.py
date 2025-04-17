@@ -507,12 +507,12 @@ class MyServer:
                 print(rgb.shape)
                 print(depth.shape)
                 target_shape = (480,640)
-                rgb = cv2.resize(rgb, (target_shape[1], target_shape[0]))
-                depth = cv2.resize(depth, (target_shape[1], target_shape[0]))
-                depth = depth.astype(np.float32)
+                rgb_input = cv2.resize(rgb, (target_shape[1], target_shape[0]))
+                depth_input = cv2.resize(depth, (target_shape[1], target_shape[0]))
+                depth_input= depth_input.astype(np.float32)
                 ort_inputs = {
-                "rgb": rgb,
-                "depth": depth
+                "rgb": rgb_input,
+                "depth": depth_input
                 }
                 semantic_label = self.ort_session.run(None, ort_inputs)
                 print(semantic_label[0].shape)
