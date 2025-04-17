@@ -290,6 +290,8 @@ class Reconstruction:
     def update_color(self,color,depth,valid_voxel_indices,mask_inlier,w,wp,v_proj,u_proj):
         #performing color integration
         color = cv2.resize(color,(depth.columns,depth.rows),interpolation= cv2.INTER_NEAREST)
+        color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
+        color = color.astype(np.float32) / 255.0
         color = o3d.t.geometry.Image(o3c.Tensor(color.astype(np.float32))).to(self.device)
         color_readings = color.as_tensor()[v_proj,u_proj].to(o3c.float32)
         color = self.vbg.attribute('color').reshape((-1, 3))
