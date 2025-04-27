@@ -6,10 +6,10 @@ from perception_box import PerceptionBox
 
 
 def main():
-   box = PerceptionBox("http://172.16.244.187:5003")
-   box.send_segmentation_model(name = "finetuned_segformer", onnx_file_path= "onnx_model_transfer/segformer/fine_tuned_segformer.onnx")
-   print(box.start_mapping(integrate_semantics=False, color = True, onnx_model_name="finetuned_segformer"))
-
+   box = PerceptionBox("http://10.192.251.78:5003")
+   # box.load_segmentation_model(name = "finetuned_segformer", onnx_file_path= "onnx_model_transfer/segformer/fine_tuned_segformer.onnx")
+   print(box.start_mapping(integrate_semantics=False, color = True))
+   box.start_live_streaming()
 
    while True:
     key = input("q to stop mapping")
@@ -17,7 +17,8 @@ def main():
         if key.lower() == 'q':
             print("User chose to quit.")
             break
-
+   box.stop_live_streaming()
+   
    time_begin = time.time()
    map_data = box.get_metric_map()
    time_end = time.time()
@@ -29,6 +30,7 @@ def main():
    points = np.array(map_data['points'])
    colors = np.array(map_data['colors'])
    box.visualize_point_cloud_color(map_data)
+   
 
    # Extract points and labels
    # points = np.array(map_data['points'])

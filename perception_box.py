@@ -7,7 +7,7 @@ import time
 
 class PerceptionBox:
     def __init__(self, address):
-        self.server = xmlrpc.client.ServerProxy(address)
+        self.server = xmlrpc.client.ServerProxy(address, allow_none=True)
         self._live_streaming_thread = None
         self._stop_live_streaming = threading.Event()
 
@@ -45,66 +45,66 @@ class PerceptionBox:
     def delete_onnx_model(self, name):
         return self.server.delete_onnx_model(name)
 
-def start_live_streaming(self, refresh_rate=1.0, semantics=False, color=True):
-    if not self.semantics and semantics:
-        print("Warning: Semantics not being integrated! Streaming metric map instead.")
-        semantics = False  
-    if not self.color and color:
-        print("Warning: Color not being integrated! Streaming without color.")
-        color = False  
+    def start_live_streaming(self, refresh_rate=2.0, semantics=False, color=True):
+        if not self.semantics and semantics:
+            print("Warning: Semantics not being integrated! Streaming metric map instead.")
+            semantics = False  
+        if not self.color and color:
+            print("Warning: Color not being integrated! Streaming without color.")
+            color = False  
 
-    if self._live_streaming_thread is not None and self._live_streaming_thread.is_alive():
-        print("Live streaming is already running.")
-        return
+        if self._live_streaming_thread is not None and self._live_streaming_thread.is_alive():
+            print("Live streaming is already running.")
+            return
 
-    self._stop_live_streaming.clear()
+        self._stop_live_streaming.clear()
 
-    def stream_loop():
-        vis = o3d.visualization.Visualizer()
-        vis.create_window(window_name='PerceptionBox Live Map', width=960, height=720)
-        added = False
-        pcd = o3d.geometry.PointCloud()
+        def stream_loop():
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(window_name='PerceptionBox Live Map', width=960, height=720)
+            added = False
+            pcd = o3d.geometry.PointCloud()
 
-        while not self._stop_live_streaming.is_set():
-            try:
-                if semantics:
-                    map_data = self.get_semantic_map()
-                    points = np.array(map_data['points'])
-                    labels = np.array(map_data['labels'])
-                    
-                    rng = np.random.default_rng()
-                    label_colors = rng.uniform(0, 1, size=(np.max(labels) + 1, 3))
-                    colors = label_colors[labels]
+            while not self._stop_live_streaming.is_set():
+                try:
+                    if semantics:
+                        map_data = self.get_semantic_map()
+                        points = np.array(map_data['points'])
+                        labels = np.array(map_data['labels'])
+                        
+                        rng = np.random.default_rng()
+                        label_colors = rng.uniform(0, 1, size=(np.max(labels) + 1, 3))
+                        colors = label_colors[labels]
 
-                else:
-                    map_data = self.get_metric_map()
-                    points = np.array(map_data['points'])
-                    colors = np.array(map_data['colors'])
+                    else:
+                        map_data = self.get_metric_map()
+                        points = np.array(map_data['points'])
+                        colors = np.array(map_data['colors'])
 
-                pcd.points = o3d.utility.Vector3dVector(points)
+                    pcd.points = o3d.utility.Vector3dVector(points)
 
-                if colors is not None and (colors.size) > 0:
-                    pcd.colors = o3d.utility.Vector3dVector(colors)
+                    if colors is not None and (colors.size) > 0:
+                        pcd.colors = o3d.utility.Vector3dVector(colors)
 
 
-                if not added:
-                    vis.add_geometry(pcd)
-                    added = True
-                else:
-                    vis.update_geometry(pcd)
+                    if not added:
+                        vis.add_geometry(pcd)
+                        added = True
+                    else:
+                        vis.update_geometry(pcd)
 
-                vis.poll_events()
-                vis.update_renderer()
+                    vis.poll_events()
+                    vis.update_renderer()
 
-            except Exception as e:
-                print(f"Live streaming error: {e}")
+                except Exception as e:
+                    print(f"Live streaming error: {e}")
 
-            time.sleep(refresh_rate)
+                time.sleep(refresh_rate)
 
-        vis.destroy_window()
+            vis.destroy_window()
 
-    self._live_streaming_thread = threading.Thread(target=stream_loop, daemon=True)
-    self._live_streaming_thread.start()
+        self._live_streaming_thread = threading.Thread(target=stream_loop, daemon=True)
+        self._live_streaming_thread.start()
 
     def stop_live_streaming(self):
         if self._live_streaming_thread is not None:
@@ -113,8 +113,7 @@ def start_live_streaming(self, refresh_rate=1.0, semantics=False, color=True):
             self._live_streaming_thread = None
             print("Live streaming stopped.")
 
-    @staticmethod
-    def visualize_point_cloud_color(map_data):
+    def visualize_point_cloud_color(self, map_data):
         points = np.array(map_data['points'])
         colors = np.array(map_data['colors'])
         pcd = o3d.geometry.PointCloud()
@@ -122,8 +121,7 @@ def start_live_streaming(self, refresh_rate=1.0, semantics=False, color=True):
         pcd.colors = o3d.utility.Vector3dVector(colors)
         o3d.visualization.draw_geometries([pcd])
 
-    @staticmethod
-    def visualize_point_cloud_labels(map_data, n_labels=21):
+    def visualize_point_cloud_labels(self, map_data, n_labels=21):
         points = np.array(map_data['points'])
         labels = np.array(map_data['labels'])
         pcd = o3d.geometry.PointCloud()
