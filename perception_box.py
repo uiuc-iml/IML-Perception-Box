@@ -9,6 +9,7 @@ class PerceptionBox:
     def __init__(self, address):
         self.server = xmlrpc.client.ServerProxy(address, allow_none=True)
         self._live_streaming_thread = None
+        self._visualizer_thread = None
         self._stop_live_streaming = threading.Event()
 
     def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None):
@@ -58,34 +59,43 @@ class PerceptionBox:
             return
 
         self._stop_live_streaming.clear()
+        self._live_map_data = None  # Shared variable
 
-        def stream_loop():
-            vis = o3d.visualization.Visualizer()
-            vis.create_window(window_name='PerceptionBox Live Map', width=960, height=720)
-            added = False
-            pcd = o3d.geometry.PointCloud()
-
+        def fetch_loop():
             while not self._stop_live_streaming.is_set():
                 try:
                     if semantics:
                         map_data = self.get_semantic_map()
                         points = np.array(map_data['points'])
                         labels = np.array(map_data['labels'])
-                        
+
                         rng = np.random.default_rng()
                         label_colors = rng.uniform(0, 1, size=(np.max(labels) + 1, 3))
                         colors = label_colors[labels]
-
                     else:
                         map_data = self.get_metric_map()
                         points = np.array(map_data['points'])
                         colors = np.array(map_data['colors'])
 
+                    self._live_map_data = (points, colors)
+
+                except Exception as e:
+                    print(f"Live streaming fetch error: {e}")
+
+                time.sleep(refresh_rate)
+
+        def visualizer_loop():
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(window_name='PerceptionBox Live Map', width=960, height=720)
+            pcd = o3d.geometry.PointCloud()
+            added = False
+
+            while not self._stop_live_streaming.is_set():
+                if self._live_map_data is not None:
+                    points, colors = self._live_map_data
                     pcd.points = o3d.utility.Vector3dVector(points)
-
-                    if colors is not None and (colors.size) > 0:
+                    if colors is not None and colors.size > 0:
                         pcd.colors = o3d.utility.Vector3dVector(colors)
-
 
                     if not added:
                         vis.add_geometry(pcd)
@@ -93,18 +103,17 @@ class PerceptionBox:
                     else:
                         vis.update_geometry(pcd)
 
-                    vis.poll_events()
-                    vis.update_renderer()
-
-                except Exception as e:
-                    print(f"Live streaming error: {e}")
-
-                time.sleep(refresh_rate)
+                vis.poll_events()
+                vis.update_renderer()
+                time.sleep(0.03)
 
             vis.destroy_window()
 
-        self._live_streaming_thread = threading.Thread(target=stream_loop, daemon=True)
+        # Start threads
+        self._live_streaming_thread = threading.Thread(target=fetch_loop, daemon=True)
+        self._visualizer_thread = threading.Thread(target=visualizer_loop, daemon=True)
         self._live_streaming_thread.start()
+        self._visualizer_thread.start()
 
     def stop_live_streaming(self):
         if self._live_streaming_thread is not None:
@@ -112,6 +121,9 @@ class PerceptionBox:
             self._live_streaming_thread.join()
             self._live_streaming_thread = None
             print("Live streaming stopped.")
+        if self._visualizer_thread is not None:
+            self._visualizer_thread.join()
+            self._live_streaming_thread = None
 
     def visualize_point_cloud_color(self, map_data):
         points = np.array(map_data['points'])
