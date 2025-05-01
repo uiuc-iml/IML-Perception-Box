@@ -131,23 +131,33 @@ class PerceptionBox:
             self._visualizer_thread.join()
             self._live_streaming_thread = None
 
-    def start_live_streaming_diff(self, refresh_rate=2):
+    def start_live_streaming_diff(self, refresh_rate=1):
         if self._live_streaming_diff_thread is not None and self._live_streaming_diff_thread.is_alive():
             print("Live diff streaming is already running.")
             return
 
         self._stop_live_streaming_diff.clear()
-        self._live_diff_data = []  # list of (points, colors)
+        self._merged_pts = []
+        self._merged_cols = []
+
+        def add_diff(points, colors):
+            self._merged_pts.append(points)
+            if colors is not None:
+                self._merged_cols.append(colors)
+
+        def clear_diff():
+            self._merged_pts.clear()
+            self._merged_cols.clear()
 
         def fetch_diff_loop():
             while not self._stop_live_streaming_diff.is_set():
                 try:
                     diff = self.get_metric_map_diff_blocks()
                     points = np.array(diff['points'])
-                    colors = np.array(diff['colors']) if diff['colors'] else None
-                    # print(len(points))
+                    colors = np.array(diff['colors']) if diff['colors'] is not None else None
+
                     if len(points) > 0:
-                        self._live_diff_data.append((points, colors))
+                        add_diff(points, colors)
                 except Exception as e:
                     print(f"[Diff Fetch] Error: {e}")
 
@@ -158,36 +168,25 @@ class PerceptionBox:
             vis.create_window(window_name='PerceptionBox Live Map (Diff)', width=960, height=720)
             pcd = o3d.geometry.PointCloud()
             vis.add_geometry(pcd)
-
-            all_points = []
-            all_colors = []
-
             while not self._stop_live_streaming_diff.is_set():
-                if self._live_diff_data:
-                    pts, cols = self._live_diff_data.pop(0)
-                    all_points.append(pts)
-                    if cols is not None:
-                        all_colors.append(cols)
+                if self._merged_pts:
+                    merged_pts = np.concatenate(self._merged_pts, axis=0)
+                    # pcd = o3d.geometry.PointCloud()
+                    pcd.points = o3d.utility.Vector3dVector(merged_pts)
 
-                    if all_points:
-                        # Build a new point cloud with all accumulated data
-                        merged_pts = np.vstack(all_points)
-                        pcd = o3d.geometry.PointCloud()
-                        pcd.points = o3d.utility.Vector3dVector(merged_pts)
+                    if self._merged_cols:
+                        merged_cols = np.concatenate(self._merged_cols, axis=0)
+                        pcd.colors = o3d.utility.Vector3dVector(merged_cols)
 
-                        if all_colors:
-                            merged_cols = np.vstack(all_colors)
-                            pcd.colors = o3d.utility.Vector3dVector(merged_cols)
-
-                        # Clear and re-add to force geometry refresh
-                        vis.clear_geometries()
-                        vis.add_geometry(pcd)
+                    # vis.clear_geometries()
+                    vis.update_geometry(pcd)
 
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.03)
 
             vis.destroy_window()
+            clear_diff()
 
         self._live_streaming_diff_thread = threading.Thread(target=fetch_diff_loop, daemon=True)
         self._visualizer_diff_thread = threading.Thread(target=visualizer_diff_loop, daemon=True)
