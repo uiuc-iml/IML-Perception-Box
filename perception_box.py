@@ -15,10 +15,10 @@ class PerceptionBox:
         self._visualizer_diff_thread = None
         self._stop_live_streaming_diff = threading.Event()
 
-    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None):
+    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None, live_stream=False):
         self.semantics = integrate_semantics
         self.color = color
-        return self.server.start_mapping(integrate_semantics, color, voxel_size, res, initial_num_blocks, onnx_model_name)
+        return self.server.start_mapping(integrate_semantics, color, voxel_size, res, initial_num_blocks, onnx_model_name, live_stream)
 
     def stop_mapping(self):
         return self.server.stop_mapping()
@@ -32,7 +32,7 @@ class PerceptionBox:
     def get_metric_map(self):
         return self.server.get_metric_map()
     
-    def get_metric_map_diff(self):
+    def get_metric_map_diff_blocks(self):
         return self.server.get_metric_map_diff_blocks()
 
     def get_semantic_map(self, map_type="pcd", top_label=True):
@@ -131,7 +131,7 @@ class PerceptionBox:
             self._visualizer_thread.join()
             self._live_streaming_thread = None
 
-    def start_live_streaming_diff(self, refresh_rate=0.5):
+    def start_live_streaming_diff(self, refresh_rate=2):
         if self._live_streaming_diff_thread is not None and self._live_streaming_diff_thread.is_alive():
             print("Live diff streaming is already running.")
             return
@@ -145,7 +145,7 @@ class PerceptionBox:
                     diff = self.get_metric_map_diff_blocks()
                     points = np.array(diff['points'])
                     colors = np.array(diff['colors']) if diff['colors'] else None
-
+                    # print(len(points))
                     if len(points) > 0:
                         self._live_diff_data.append((points, colors))
                 except Exception as e:
@@ -163,18 +163,25 @@ class PerceptionBox:
             all_colors = []
 
             while not self._stop_live_streaming_diff.is_set():
-                while self._live_diff_data:
+                if self._live_diff_data:
                     pts, cols = self._live_diff_data.pop(0)
                     all_points.append(pts)
                     if cols is not None:
                         all_colors.append(cols)
 
-                if all_points:
-                    pcd.points = o3d.utility.Vector3dVector(np.vstack(all_points))
-                    if all_colors:
-                        pcd.colors = o3d.utility.Vector3dVector(np.vstack(all_colors))
+                    if all_points:
+                        # Build a new point cloud with all accumulated data
+                        merged_pts = np.vstack(all_points)
+                        pcd = o3d.geometry.PointCloud()
+                        pcd.points = o3d.utility.Vector3dVector(merged_pts)
 
-                    vis.update_geometry(pcd)
+                        if all_colors:
+                            merged_cols = np.vstack(all_colors)
+                            pcd.colors = o3d.utility.Vector3dVector(merged_cols)
+
+                        # Clear and re-add to force geometry refresh
+                        vis.clear_geometries()
+                        vis.add_geometry(pcd)
 
                 vis.poll_events()
                 vis.update_renderer()

@@ -229,9 +229,8 @@ class Reconstruction:
         buf_indices, masks = self.vbg.hashmap().find(frustum_block_coords)
         # o3d.core.cuda.synchronize()
         # after computing buf_indices (an o3d.core.Tensor on CUDA)
-        new_blocks = buf_indices.cpu().numpy().tolist()
-        if self.live_stream:
-            self._updated_blocks.update(new_blocks)
+        new_blocks = buf_indices.numpy().tolist()
+        self._updated_blocks.update(new_blocks)
 
         voxel_coords, voxel_indices = self.vbg.voxel_coordinates_and_flattened_indices(
             buf_indices)
@@ -479,8 +478,9 @@ class Reconstruction:
             return pcd,None
     
 
-    def extract_point_cloud_wcolor_diff_blocks(self, return_color=True):
+    def extract_point_cloud_wcolor_diff_blocks(self, tsdf_thresh=0.1, return_color=True):
         buf_ids = list(self._updated_blocks)
+        
         if not buf_ids:
             return np.empty((0,3)), (None if not return_color else np.empty((0,3)))
         self._updated_blocks.clear()
@@ -490,9 +490,13 @@ class Reconstruction:
         coords, flat_idxs = self.vbg.voxel_coordinates_and_flattened_indices(b)
         # coords: Tensor[B * res³, 3], flat_idxs: Tensor[B * res³]
 
-        weight_attr = self.vbg.attribute('weight').reshape(-1)     
-        weight_sel  = weight_attr[flat_idxs]                       # [B * res³]
-        mask        = (weight_sel > 0)                             # Boolean Tensor
+        tsdf_attr = self.vbg.attribute('tsdf').reshape(-1)
+        weight_attr = self.vbg.attribute('weight').reshape(-1)
+
+        tsdf_vals = tsdf_attr[flat_idxs]
+        weight_vals = weight_attr[flat_idxs]
+
+        mask = (weight_vals > 0) & (tsdf_vals.abs() < tsdf_thresh)
 
         coords_f     = coords[mask]                                # [K,3]
         flat_idxs_f  = flat_idxs[mask]                             # [K]

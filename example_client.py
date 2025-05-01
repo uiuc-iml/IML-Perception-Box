@@ -8,7 +8,7 @@ from perception_box import PerceptionBox
 def main():
    box = PerceptionBox("http://10.192.251.78:5003")
    # box.load_segmentation_model(name = "finetuned_segformer", onnx_file_path= "onnx_model_transfer/segformer/fine_tuned_segformer.onnx")
-   print(box.start_mapping(integrate_semantics=False, color = True))
+   print(box.start_mapping(integrate_semantics=False, color = True, live_stream=True))
    box.start_live_streaming_diff()
 
    while True:
