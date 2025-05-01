@@ -34,6 +34,7 @@ class MyServer:
         self.server.register_function(self.resume_mapping)
         self.server.register_function(self.get_map_stop_mapping)
         self.server.register_function(self.get_metric_map)
+        self.server.register_function(self.get_metric_map_diff_blocks)
         self.server.register_function(self.load_segmentation_model)
         self.server.register_function(self.list_onnx_models)
         self.server.register_function(self.delete_onnx_model)
@@ -146,7 +147,7 @@ class MyServer:
         print(f"Configuration Loaded: {config}")
 
 
-    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None):
+    def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None, live_stream=False):
         if not self.task_running:
             self.task_running = True
             self.pause_mapping_flag = False
@@ -179,6 +180,8 @@ class MyServer:
                 n_labels=num_labels,
                 integrate_color=color,
                 init_blocks=self.init_blocks
+                live_stream=live_stream
+
             )
             self.task_thread = threading.Thread(target=self.mapping, daemon=True)
             self.queue_thread = threading.Thread(target=self.fill_queue_from_socket, daemon=True)
@@ -492,6 +495,18 @@ class MyServer:
             else:
                 result = "Reconstruction object is not initialized"
         return result
+    
+    def get_metric_map_diff_blocks(self):
+        with self.vbg_access_lock:
+            if self.rec is not None:
+                pts, cols = self.rec.extract_point_cloud_wcolor_diff_blocks(return_color=True)
+            else:
+                return "Reconstruction object is not initialized"
+        return {
+                'points': pts.tolist(),
+                'colors': (cols.tolist() if cols is not None else [])
+            }
+
 
 
     def update_rec(self, rgb, depth, pose, intrinsics):

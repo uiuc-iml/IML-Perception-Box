@@ -11,6 +11,9 @@ class PerceptionBox:
         self._live_streaming_thread = None
         self._visualizer_thread = None
         self._stop_live_streaming = threading.Event()
+        self._live_streaming_diff_thread = None
+        self._visualizer_diff_thread = None
+        self._stop_live_streaming_diff = threading.Event()
 
     def start_mapping(self, integrate_semantics=False, color=True, voxel_size=0.05, res=8, initial_num_blocks=17500, onnx_model_name=None):
         self.semantics = integrate_semantics
@@ -28,6 +31,9 @@ class PerceptionBox:
 
     def get_metric_map(self):
         return self.server.get_metric_map()
+    
+    def get_metric_map_diff(self):
+        return self.server.get_metric_map_diff_blocks()
 
     def get_semantic_map(self, map_type="pcd", top_label=True):
         return self.server.get_semantic_map(map_type, top_label)
@@ -124,6 +130,73 @@ class PerceptionBox:
         if self._visualizer_thread is not None:
             self._visualizer_thread.join()
             self._live_streaming_thread = None
+
+    def start_live_streaming_diff(self, refresh_rate=0.5):
+        if self._live_streaming_diff_thread is not None and self._live_streaming_diff_thread.is_alive():
+            print("Live diff streaming is already running.")
+            return
+
+        self._stop_live_streaming_diff.clear()
+        self._live_diff_data = []  # list of (points, colors)
+
+        def fetch_diff_loop():
+            while not self._stop_live_streaming_diff.is_set():
+                try:
+                    diff = self.get_metric_map_diff_blocks()
+                    points = np.array(diff['points'])
+                    colors = np.array(diff['colors']) if diff['colors'] else None
+
+                    if len(points) > 0:
+                        self._live_diff_data.append((points, colors))
+                except Exception as e:
+                    print(f"[Diff Fetch] Error: {e}")
+
+                time.sleep(refresh_rate)
+
+        def visualizer_diff_loop():
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(window_name='PerceptionBox Live Map (Diff)', width=960, height=720)
+            pcd = o3d.geometry.PointCloud()
+            vis.add_geometry(pcd)
+
+            all_points = []
+            all_colors = []
+
+            while not self._stop_live_streaming_diff.is_set():
+                while self._live_diff_data:
+                    pts, cols = self._live_diff_data.pop(0)
+                    all_points.append(pts)
+                    if cols is not None:
+                        all_colors.append(cols)
+
+                if all_points:
+                    pcd.points = o3d.utility.Vector3dVector(np.vstack(all_points))
+                    if all_colors:
+                        pcd.colors = o3d.utility.Vector3dVector(np.vstack(all_colors))
+
+                    vis.update_geometry(pcd)
+
+                vis.poll_events()
+                vis.update_renderer()
+                time.sleep(0.03)
+
+            vis.destroy_window()
+
+        self._live_streaming_diff_thread = threading.Thread(target=fetch_diff_loop, daemon=True)
+        self._visualizer_diff_thread = threading.Thread(target=visualizer_diff_loop, daemon=True)
+        self._live_streaming_diff_thread.start()
+        self._visualizer_diff_thread.start()
+
+    def stop_live_streaming_diff(self):
+        if self._live_streaming_diff_thread is not None:
+            self._stop_live_streaming_diff.set()
+            self._live_streaming_diff_thread.join()
+            self._live_streaming_diff_thread = None
+            print("Live streaming stopped.")
+        if self._visualizer_diff_thread is not None:
+            self._visualizer_diff_thread.join()
+            self._live_streaming_diff_thread = None
+
 
     def visualize_point_cloud_color(self, map_data):
         points = np.array(map_data['points'])

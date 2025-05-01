@@ -124,7 +124,7 @@ def get_indices_from_points(voxel_grid,points,res = 8,voxel_size = 0.025,device 
 
 class Reconstruction:
 
-    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CUDA:0'),miu = 0.001, init_blocks=17500):
+    def __init__(self,depth_scale = 1000.0,depth_max=5.0,res = 8,voxel_size = 0.025,trunc_multiplier = 8,n_labels = None,integrate_color = True,device = o3d.core.Device('CUDA:0'),miu = 0.001, init_blocks=17500, live_stream=False):
         """Initializes the TSDF reconstruction pipeline using voxel block grids, ideally using a GPU device for efficiency. 
 
         Args:
@@ -148,6 +148,9 @@ class Reconstruction:
         self.miu = miu
         self.trunc = self.voxel_size * trunc_multiplier
         self.init_blocks = init_blocks
+        self._updated_blocks = set()
+        self.live_stream=live_stream
+
         try:
             self.initialize_vbg()
         except Exception as e:
@@ -225,6 +228,11 @@ class Reconstruction:
         # Find buf indices in the underlying engine
         buf_indices, masks = self.vbg.hashmap().find(frustum_block_coords)
         # o3d.core.cuda.synchronize()
+        # after computing buf_indices (an o3d.core.Tensor on CUDA)
+        new_blocks = buf_indices.cpu().numpy().tolist()
+        if self.live_stream:
+            self._updated_blocks.update(new_blocks)
+
         voxel_coords, voxel_indices = self.vbg.voxel_coordinates_and_flattened_indices(
             buf_indices)
         # o3d.core.cuda.synchronize()
@@ -469,6 +477,36 @@ class Reconstruction:
                 return None,None
         else:
             return pcd,None
+    
+
+    def extract_point_cloud_wcolor_diff_blocks(self, return_color=True):
+        buf_ids = list(self._updated_blocks)
+        if not buf_ids:
+            return np.empty((0,3)), (None if not return_color else np.empty((0,3)))
+        self._updated_blocks.clear()
+
+        b = o3c.Tensor(np.array(buf_ids, dtype=np.int32), device=self.device)
+
+        coords, flat_idxs = self.vbg.voxel_coordinates_and_flattened_indices(b)
+        # coords: Tensor[B * res³, 3], flat_idxs: Tensor[B * res³]
+
+        weight_attr = self.vbg.attribute('weight').reshape(-1)     
+        weight_sel  = weight_attr[flat_idxs]                       # [B * res³]
+        mask        = (weight_sel > 0)                             # Boolean Tensor
+
+        coords_f     = coords[mask]                                # [K,3]
+        flat_idxs_f  = flat_idxs[mask]                             # [K]
+
+        pts = coords_f.cpu().numpy().reshape(-1, 3)
+
+        cols = None
+        if return_color and self.integrate_color:
+            color_attr = self.vbg.attribute('color').reshape(-1, 3) 
+            sel_colors = color_attr[flat_idxs_f]                     # [K,3]
+            cols = sel_colors.cpu().numpy().reshape(-1, 3)
+
+        return pts, cols
+
 
     def extract_triangle_mesh(self):
         """Returns the current (colored) mesh and the current probability for each class estimate for each of the vertices, if performing metric-semantic reconstruction
