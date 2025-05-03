@@ -25,7 +25,7 @@ from segmentation_model_loader import MaskformerSegmenter
 class MyServer:
     def __init__(self):
         # Set up the XML-RPC server
-        self.server = xmlrpc.server.SimpleXMLRPCServer(('172.16.244.187', 5003))
+        self.server = xmlrpc.server.SimpleXMLRPCServer(('10.195.4.252', 5003))
         self.server.register_introspection_functions()
         self.server.register_function(self.start_mapping)
         self.server.register_function(self.stop_mapping)
@@ -53,6 +53,7 @@ class MyServer:
         self.index_reconstruction = 0
         self.queue = queue.Queue(maxsize=2000)  # Thread-safe queue
         self.onnx = True
+        self.ort_session = None
         self.load_config()
         
 
@@ -113,7 +114,7 @@ class MyServer:
         # self.depth_max = config.get('depth_max', 5.0)
         # self.miu = config.get('miu', 0.001)
 
-        yaml_file_path = '../Yaml-files/zed.yaml'
+        yaml_file_path = '../Yaml-files/realsense.yaml'
 
         # Read the camera YAML file
         with open(yaml_file_path, 'r') as file:
@@ -179,7 +180,7 @@ class MyServer:
                 voxel_size=self.voxel_size,
                 n_labels=num_labels,
                 integrate_color=color,
-                init_blocks=self.init_blocks
+                init_blocks=self.init_blocks,
                 live_stream=live_stream
 
             )
@@ -379,37 +380,37 @@ class MyServer:
                         if depth_frame.dtype != np.float32:
                             depth_frame = depth_frame.astype(np.float32) / 1000.0 
 
-                        depth_o3d = o3d.geometry.Image(depth_frame)
-                        color_o3d = o3d.geometry.Image(cv2.cvtColor(color_frame, cv2.COLOR_BGR2RGB))
+                        # depth_o3d = o3d.geometry.Image(depth_frame)
+                        # color_o3d = o3d.geometry.Image(cv2.cvtColor(color_frame, cv2.COLOR_BGR2RGB))
 
-                        # Create RGBD image
-                        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
-                            color_o3d,
-                            depth_o3d,
-                            depth_scale=1.0,              # Already scaled to meters
-                            depth_trunc=5.0,
-                            convert_rgb_to_intensity=False
-                        )
+                        # # Create RGBD image
+                        # rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+                        #     color_o3d,
+                        #     depth_o3d,
+                        #     depth_scale=1.0,              # Already scaled to meters
+                        #     depth_trunc=5.0,
+                        #     convert_rgb_to_intensity=False
+                        # )
 
-                        intrinsics = o3d.camera.PinholeCameraIntrinsic(
-                            width=1280,
-                            height=720,
-                            fx=523.2045,
-                            fy=523.2045,
-                            cx=645.2405,
-                            cy=369.2390
-                        )
+                        # intrinsics = o3d.camera.PinholeCameraIntrinsic(
+                        #     width=1280,
+                        #     height=720,
+                        #     fx=523.2045,
+                        #     fy=523.2045,
+                        #     cx=645.2405,
+                        #     cy=369.2390
+                        # )
 
-                        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
-                            rgbd, intrinsic=intrinsics
-                        )
+                        # pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
+                        #     rgbd, intrinsic=intrinsics
+                        # )
 
-                        pcd.transform([[1, 0, 0, 0],
-                                    [0, -1, 0, 0],
-                                    [0, 0, -1, 0],
-                                    [0, 0, 0, 1]])
+                        # pcd.transform([[1, 0, 0, 0],
+                        #             [0, -1, 0, 0],
+                        #             [0, 0, -1, 0],
+                        #             [0, 0, 0, 1]])
 
-                        o3d.visualization.draw_geometries([pcd])
+                        # o3d.visualization.draw_geometries([pcd])
 
                     else:
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
@@ -444,8 +445,9 @@ class MyServer:
                 intrinsics = self.K
                 # print("Intrensic Matrix:")
                 # print(intrinsics)
-                # print(type(color_frame))
-                # print(type(depth_frame))
+                print((color_frame.shape))
+                print((depth_frame.shape))
+                print(intrinsics)
                 data_dict = {
                 'color': color_frame,
                 'depth': depth_frame,
@@ -458,7 +460,7 @@ class MyServer:
                     if not self.pause_mapping_flag and not self.queue.full():
                         self.queue.put(data_dict)
                         self.queue_empty.notify()
-                time.sleep(0.2)
+                time.sleep(0.05)
 
         except Exception as e:
             print(f"Error in socket client: {e}")

@@ -229,7 +229,7 @@ class Reconstruction:
         buf_indices, masks = self.vbg.hashmap().find(frustum_block_coords)
         # o3d.core.cuda.synchronize()
         # after computing buf_indices (an o3d.core.Tensor on CUDA)
-        new_blocks = buf_indices.numpy().tolist()
+        new_blocks = buf_indices.cpu().numpy().tolist()
         self._updated_blocks.update(new_blocks)
 
         voxel_coords, voxel_indices = self.vbg.voxel_coordinates_and_flattened_indices(
@@ -465,7 +465,11 @@ class Reconstruction:
         target_points = np.asarray(pcd.points)
         if(self.integrate_color):
             colors,coords = get_properties(self.vbg,target_points,'color',res = self.res,voxel_size = self.voxel_size,device = self.device)
-            colors = colors.cpu().numpy().astype(np.float64)
+            try:
+                colors = colors.cpu().numpy().astype(np.float64)
+            except Exception as e:
+                print(e)
+
             if colors is not None:
                 if(return_raw_logits):
                     return pcd,colors
@@ -478,13 +482,13 @@ class Reconstruction:
             return pcd,None
     
 
-    def extract_point_cloud_wcolor_diff_blocks(self, tsdf_thresh=0.1, return_color=True):
+    def extract_point_cloud_wcolor_diff_blocks(self, tsdf_thresh=0.01, return_color=True):
         buf_ids = list(self._updated_blocks)
         
         if not buf_ids:
             return np.empty((0,3)), (None if not return_color else np.empty((0,3)))
         self._updated_blocks.clear()
-
+        print("Here1")
         b = o3c.Tensor(np.array(buf_ids, dtype=np.int32), device=self.device)
 
         coords, flat_idxs = self.vbg.voxel_coordinates_and_flattened_indices(b)
@@ -495,20 +499,22 @@ class Reconstruction:
 
         tsdf_vals = tsdf_attr[flat_idxs]
         weight_vals = weight_attr[flat_idxs]
-
+        print("Here2")
         mask = (weight_vals > 0) & (tsdf_vals.abs() < tsdf_thresh)
 
         coords_f     = coords[mask]                                # [K,3]
         flat_idxs_f  = flat_idxs[mask]                             # [K]
 
         pts = coords_f.cpu().numpy().reshape(-1, 3)
-
+        print("Here3")
         cols = None
         if return_color and self.integrate_color:
-            color_attr = self.vbg.attribute('color').reshape(-1, 3) 
-            sel_colors = color_attr[flat_idxs_f]                     # [K,3]
-            cols = sel_colors.cpu().numpy().reshape(-1, 3)
-
+            # color_attr = self.vbg.attribute('color').reshape(-1, 3) 
+            # sel_colors = color_attr[flat_idxs_f]                     # [K,3]
+            # cols = sel_colors.cpu().numpy().reshape(-1, 3)
+            color_vals, _ = get_properties(self.vbg, pts.astype(np.float32), 'color', res=self.res, voxel_size=self.voxel_size, device=self.device)
+            cols = color_vals.cpu().numpy().astype(np.float64)
+        print(pts.shape, cols)
         return pts, cols
 
 
