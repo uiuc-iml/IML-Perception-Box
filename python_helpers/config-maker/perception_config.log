@@ -1,0 +1,33 @@
+2025-05-03 19:30:24,473 - perception_config - INFO - Starting Perception System Configuration Tool
+2025-05-03 19:30:24,478 - werkzeug - WARNING -  * Debugger is active!
+2025-05-03 19:30:24,478 - werkzeug - INFO -  * Debugger PIN: 937-116-184
+2025-05-03 19:30:46,466 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:30:46] "GET / HTTP/1.1" 200 -
+2025-05-03 19:31:02,853 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 19:31:02,854 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:31:02] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:31:02,856 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:31:02] "GET / HTTP/1.1" 200 -
+2025-05-03 19:31:10,113 - perception_config - INFO - Mapping server started with zed.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:31:10,114 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:31:10] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:31:10,116 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:31:10] "GET / HTTP/1.1" 200 -
+2025-05-03 19:31:39,532 - perception_config - INFO - Generating YAML for ZED camera
+2025-05-03 19:31:43,450 - perception_config - INFO - ZED camera configuration fetched successfully
+2025-05-03 19:31:43,453 - perception_config - INFO - YAML file generated successfully: /home/motion/IML-Perception-Box/Yaml-files/zed.yaml
+2025-05-03 19:31:43,453 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:31:43] "POST /generate_yaml HTTP/1.1" 200 -
+2025-05-03 19:32:05,291 - perception_config - INFO - Generating YAML for ZED camera
+2025-05-03 19:32:07,211 - perception_config - INFO - ZED camera configuration fetched successfully
+2025-05-03 19:32:07,214 - perception_config - INFO - YAML file generated successfully: /home/motion/IML-Perception-Box/Yaml-files/zed.yaml
+2025-05-03 19:32:07,214 - werkzeug - INFO - 127.0.0.1 - - [03/May/2025 19:32:07] "POST /generate_yaml HTTP/1.1" 200 -
+2025-05-03 19:33:24,718 - perception_config - INFO - Starting Perception System Configuration Tool
+2025-05-03 19:33:24,723 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.195.4.252:5000
+2025-05-03 19:33:24,723 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-03 19:33:24,724 - werkzeug - INFO -  * Restarting with stat
+2025-05-03 19:33:24,903 - perception_config - INFO - Starting Perception System Configuration Tool
+2025-05-03 19:33:24,909 - werkzeug - WARNING -  * Debugger is active!
+2025-05-03 19:33:24,910 - werkzeug - INFO -  * Debugger PIN: 937-116-184
+2025-05-03 19:33:28,698 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:33:28] "GET / HTTP/1.1" 200 -
+2025-05-03 19:33:28,834 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:33:28] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-05-03 19:33:40,955 - perception_config - INFO - Kimera-VIO started with dataset path: /home/motion/Euroc/V1_01_easy/
+2025-05-03 19:33:40,956 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:33:40] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:33:40,958 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:33:40] "GET / HTTP/1.1" 200 -

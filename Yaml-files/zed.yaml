@@ -1,43 +1,91 @@
 Camera:
+  name: ZED2
+  setup: monocular
+  model: perspective
   color_order: RGB
   cols: 1280
-  cx: 645.240478515625
-  cy: 369.239013671875
+  rows: 720
   fps: 60.0
-  fx: 523.2044677734375
-  fy: 523.2044677734375
-  h_fov: 101.47052001953125
+  fx: 523.6056518554688
+  fy: 523.6056518554688
+  cx: 645.2454833984375
+  cy: 369.2337951660156
   k1: 0.0
   k2: 0.0
-  k3: 0.0
-  model: perspective
-  name: ZED2
   p1: 0.0
   p2: 0.0
-  rows: 720
-  setup: monocular
+  k3: 0.0
+  h_fov: 101.4274673461914
   stereo_baseline: 119.90037536621094
-Mapping:
-  depth_max: 5.0
-  depth_scale: 1000.0
-  miu: 0.001
-  n_labels: 150
-  res: 8
-  truncation_vsize_multiple: 8
-  voxel_size: 0.025
-
 StereoRectifier:
-  K_left: [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0]
-  K_right: [523.0937, 0.0, 645.2420, 0.0, 523.0937, 369.2362, 0.0, 0.0, 1.0]
-  R_left: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-  R_right: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-  T_left: [0.0, 0.0, 0.0]
-  T_right: [119.9004, 0.0, 0.0]
-
-  # Distortion coefficients
-  D_left: [0.0, 0.0, 0.0, 0.0, 0.0]
-  D_right: [0.0, 0.0, 0.0, 0.0, 0.0]
-
+  K_left:
+  - 523.0937
+  - 0.0
+  - 645.242
+  - 0.0
+  - 523.0937
+  - 369.2362
+  - 0.0
+  - 0.0
+  - 1.0
+  K_right:
+  - 523.0937
+  - 0.0
+  - 645.242
+  - 0.0
+  - 523.0937
+  - 369.2362
+  - 0.0
+  - 0.0
+  - 1.0
+  R_left:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  R_right:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  T_left:
+  - 0.0
+  - 0.0
+  - 0.0
+  T_right:
+  - 119.9004
+  - 0.0
+  - 0.0
+  D_left:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  D_right:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
 SocketPublisher:
-  address: 127.0.0.1 # Ensure this matches the server IP
-  port: 7000         # Ensure this matches the server port
+  address: 127.0.0.1
+  port: 7000
+Mapping:
+  voxel_size: 0.025
+  res: 8
+  n_labels: 150
+  depth_scale: 1000.0
+  depth_max: 5.0
+  miu: 0.001
+  truncation_vsize_multiple: 8

@@ -3,113 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Configuration</title>
+    <title>Perception System Configuration</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
         body {
-            background-color: #f8f9fa;
-            padding: 20px;
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .container {
-            max-width: 800px;
-            background-color: white;
-            border-radius: 8px;
+        
+        .navbar {
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border: none;
+        }
+        
+        .card-body {
             padding: 20px;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
+        
+        .form-label {
+            font-weight: 500;
+            color: var(--dark-color);
         }
-        .form-section {
-            margin-bottom: 20px;
-        }
-        .form-section h4 {
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
             margin-bottom: 15px;
         }
-        .form-control {
+        
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+            border-color: var(--primary-color);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
             margin-bottom: 15px;
         }
-        .btn-submit {
-            display: block;
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            border-color: var(--warning-color);
+            color: var(--dark-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .mapping-params {
+            background-color: var(--light-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .section-icon {
+            margin-right: 10px;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--secondary-color);
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 0;
+            margin-right: 5px;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background-color: transparent;
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        .nav-tabs .nav-link:hover:not(.active) {
+            border-bottom: 3px solid #e9ecef;
+        }
+
+        .tab-content {
+            padding: 20px 0;
+        }
+
+        /* Spinner for loading indication */
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .spinner-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
+    <!-- Loading Spinner -->
+    <div class="spinner-overlay" id="loadingSpinner">
+        <div class="spinner-content">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Processing... Please wait</p>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="bi bi-camera-fill"></i> Perception System TestKit</a>
+        </div>
+    </nav>
+
     <div class="container">
-        <div class="header">
-            <h1>Camera Configuration Tool</h1>
-            <p class="text-muted">Easily generate configuration files for ZED and RealSense cameras.</p>
+        <!-- Tabbed Navigation -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab" aria-controls="config" aria-selected="true">
+                    <i class="bi bi-gear-fill"></i> Configuration
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="mapping-tab" data-bs-toggle="tab" data-bs-target="#mapping" type="button" role="tab" aria-controls="mapping" aria-selected="false">
+                    <i class="bi bi-map-fill"></i> Mapping
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="slam-tab" data-bs-toggle="tab" data-bs-target="#slam" type="button" role="tab" aria-controls="slam" aria-selected="false">
+                    <i class="bi bi-compass"></i> SLAM/VIO
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <!-- Configuration Tab -->
+            <div class="tab-pane fade show active" id="config" role="tabpanel" aria-labelledby="config-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-camera-fill section-icon"></i>Camera Configuration
+                    </div>
+                    <div class="card-body">
+                        <form action="/generate_yaml" method="post" id="yamlForm">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="camera_type" class="form-label">Camera Type</label>
+                                    <select name="camera_type" id="camera_type" class="form-select" onchange="toggleOptions()">
+                                        <option value="ZED">ZED</option>
+                                        <option value="RealSense">RealSense</option>
+                                        <option value="Custom">Custom</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- ZED Options -->
+                            <div id="zed_options">
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <label for="zed_resolution" class="form-label">Resolution</label>
+                                        <select name="zed_resolution" id="zed_resolution" class="form-select">
+                                            {% for res in zed_resolutions %}
+                                            <option value="{{ res }}">{{ res }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="zed_fps" class="form-label">Frame Rate</label>
+                                        <select name="zed_fps" id="zed_fps" class="form-select">
+                                            {% for frame in zed_fps_options %}
+                                            <option value="{{ frame }}">{{ frame }} FPS</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RealSense Options -->
+                            <div id="realsense_options" style="display: none;">
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
+                                        <label for="realsense_resolution" class="form-label">Resolution</label>
+                                        <select name="realsense_resolution" id="realsense_resolution" class="form-select">
+                                            {% for res in realsense_resolutions %}
+                                            <option value="{{ res[0] }}x{{ res[1] }}">{{ res[0] }}x{{ res[1] }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="realsense_format" class="form-label">Format</label>
+                                        <select name="realsense_format" id="realsense_format" class="form-select">
+                                            {% for fmt in realsense_formats %}
+                                            <option value="{{ fmt }}">{{ fmt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="realsense_fps" class="form-label">Frame Rate</label>
+                                        <select name="realsense_fps" id="realsense_fps" class="form-select">
+                                            {% for frame in realsense_fps_options %}
+                                            <option value="{{ frame }}">{{ frame }} FPS</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Socket Settings -->
+                            <h5 class="mt-4 mb-3">Socket Settings</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="socket_address" class="form-label">Socket Address</label>
+                                    <input type="text" name="socket_address" id="socket_address" class="form-control" value="127.0.0.1">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="socket_port" class="form-label">Socket Port</label>
+                                    <input type="number" name="socket_port" id="socket_port" class="form-control" value="7000">
+                                </div>
+                            </div>
+
+                            <!-- Mapping Parameters -->
+                            <h5 class="mt-4 mb-3">Mapping Parameters</h5>
+                            <div class="mapping-params">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="mapping_voxel_size" class="form-label">Voxel Size</label>
+                                        <input type="number" step="0.001" name="mapping_voxel_size" id="mapping_voxel_size" class="form-control" value="0.025">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="mapping_res" class="form-label">Resolution</label>
+                                        <input type="number" name="mapping_res" id="mapping_res" class="form-control" value="8">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="mapping_n_labels" class="form-label">Number of Labels</label>
+                                        <input type="number" name="mapping_n_labels" id="mapping_n_labels" class="form-control" value="150">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="mapping_depth_scale" class="form-label">Depth Scale</label>
+                                        <input type="number" step="0.1" name="mapping_depth_scale" id="mapping_depth_scale" class="form-control" value="1000.0">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="mapping_depth_max" class="form-label">Depth Max</label>
+                                        <input type="number" step="0.1" name="mapping_depth_max" id="mapping_depth_max" class="form-control" value="5.0">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="mapping_miu" class="form-label">Miu</label>
+                                        <input type="number" step="0.001" name="mapping_miu" id="mapping_miu" class="form-control" value="0.001">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="mapping_truncation_vsize_multiple" class="form-label">Truncation Vsize Multiple</label>
+                                        <input type="number" name="mapping_truncation_vsize_multiple" id="mapping_truncation_vsize_multiple" class="form-control" value="8">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" onclick="showSpinner()">
+                                <i class="bi bi-file-earmark-plus"></i> Generate YAML
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapping Tab -->
+            <div class="tab-pane fade" id="mapping" role="tabpanel" aria-labelledby="mapping-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-map-fill section-icon"></i>Mapping Server
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/run_mapping_server" id="mappingForm">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="mapping_camera_type" class="form-label">Camera Type</label>
+                                    <select name="mapping_camera_type" id="mapping_camera_type" class="form-select">
+                                        {% for cam in camera_options %}
+                                        <option value="{{ cam|lower }}">{{ cam }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="mapping_server_address" class="form-label">Server Address</label>
+                                    <input type="text" name="mapping_server_address" id="mapping_server_address" class="form-control" value="10.195.4.252">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="mapping_server_port" class="form-label">Server Port</label>
+                                    <input type="number" name="mapping_server_port" id="mapping_server_port" class="form-control" value="5003">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-warning" onclick="showSpinner()">
+                                <i class="bi bi-play-fill"></i> Run Mapping Server
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLAM Tab -->
+            <div class="tab-pane fade" id="slam" role="tabpanel" aria-labelledby="slam-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-compass section-icon"></i>SLAM/VIO Systems
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/run_slam" id="slamForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="slam_type" class="form-label">SLAM Type</label>
+                                    <select name="slam_type" id="slam_type" class="form-select" onchange="toggleSlamOptions()">
+                                        {% for option in slam_options %}
+                                        <option value="{{ option }}">{{ option }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div id="stella_vslam_options">
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <label for="slam_camera_type" class="form-label">Camera Type</label>
+                                        <select name="slam_camera_type" id="slam_camera_type" class="form-select">
+                                            {% for cam in camera_options %}
+                                            <option value="{{ cam|lower }}">{{ cam }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="kimera_vio_options" style="display: none;">
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <label for="kimera_dataset_path" class="form-label">Dataset Path</label>
+                                        <input type="text" name="kimera_dataset_path" id="kimera_dataset_path" class="form-control" value="/home/motion/catkin_ws/src/datasets/zed2_dataset_20250502_145116/">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-success" onclick="showSpinner()">
+                                <i class="bi bi-play-fill"></i> Run SLAM/VIO
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <form action="/generate_yaml" method="post">
-            <div class="form-section">
-                <h4>Select Camera Type</h4>
-                <select name="camera_type" id="camera_type" class="form-select" onchange="toggleOptions()">
-                    <option value="ZED">ZED</option>
-                    <option value="RealSense">RealSense</option>
-                </select>
+        <!-- Notification Card -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <i class="bi bi-info-circle-fill section-icon"></i>System Status
             </div>
-
-            <!-- ZED Options -->
-            <div id="zed_options" class="form-section">
-                <h4>ZED Camera Options</h4>
-                <label for="zed_resolution" class="form-label">Resolution:</label>
-                <select name="zed_resolution" id="zed_resolution" class="form-select">
-                    {% for res in zed_resolutions %}
-                    <option value="{{ res }}">{{ res }}</option>
-                    {% endfor %}
-                </select>
-
-                <label for="zed_fps" class="form-label">Frame Rate:</label>
-                <select name="zed_fps" id="zed_fps" class="form-select">
-                    {% for frame in zed_fps_options %}
-                    <option value="{{ frame }}">{{ frame }} FPS</option>
-                    {% endfor %}
-                </select>
+            <div class="card-body">
+                <p id="statusMessage">System ready. Configure settings and launch services as needed.</p>
             </div>
-
-            <!-- RealSense Options -->
-            <div id="realsense_options" class="form-section" style="display: none;">
-                <h4>RealSense Camera Options</h4>
-                <label for="realsense_resolution" class="form-label">Resolution:</label>
-                <select name="realsense_resolution" id="realsense_resolution" class="form-select">
-                    {% for res in realsense_resolutions %}
-                    <option value="{{ res[0] }}x{{ res[1] }}">{{ res[0] }}x{{ res[1] }}</option>
-                    {% endfor %}
-                </select>
-
-                <label for="realsense_format" class="form-label">Format:</label>
-                <select name="realsense_format" id="realsense_format" class="form-select">
-                    {% for fmt in realsense_formats %}
-                    <option value="{{ fmt }}">{{ fmt }}</option>
-                    {% endfor %}
-                </select>
-
-                <label for="realsense_fps" class="form-label">Frame Rate:</label>
-                <select name="realsense_fps" id="realsense_fps" class="form-select">
-                    {% for frame in realsense_fps_options %}
-                    <option value="{{ frame }}">{{ frame }} FPS</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Socket Settings -->
-            <div class="form-section">
-                <h4>Socket Settings</h4>
-                <label for="socket_address" class="form-label">Socket Address:</label>
-                <input type="text" name="socket_address" id="socket_address" class="form-control" value="127.0.0.1">
-
-                <label for="socket_port" class="form-label">Socket Port:</label>
-                <input type="number" name="socket_port" id="socket_port" class="form-control" value="7000">
-            </div>
-
-            <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary btn-submit">Generate YAML</button>
-        </form>
+        </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-3 bg-light text-center">
+        <div class="container">
+            <p class="text-muted mb-0">© 2025 Perception System Configuration Tool | IML Research Lab</p>
+        </div>
+    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
@@ -119,6 +435,39 @@
             document.getElementById("zed_options").style.display = (cameraType === "ZED") ? "block" : "none";
             document.getElementById("realsense_options").style.display = (cameraType === "RealSense") ? "block" : "none";
         }
+        
+        function toggleSlamOptions() {
+            const slamType = document.getElementById("slam_type").value;
+            document.getElementById("stella_vslam_options").style.display = (slamType === "Stella-VSLAM") ? "block" : "none";
+            document.getElementById("kimera_vio_options").style.display = (slamType === "Kimera-VIO") ? "block" : "none";
+        }
+        
+        function showSpinner() {
+            document.getElementById("loadingSpinner").style.display = "flex";
+            setTimeout(() => {
+                document.getElementById("loadingSpinner").style.display = "none";
+            }, 10000); // Safety timeout after 10 seconds
+        }
+        
+        // Form submission with fetch API
+        document.getElementById("yamlForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            showSpinner();
+            
+            fetch("/generate_yaml", {
+                method: "POST",
+                body: new FormData(this)
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("loadingSpinner").style.display = "none";
+                document.getElementById("statusMessage").textContent = data;
+            })
+            .catch(error => {
+                document.getElementById("loadingSpinner").style.display = "none";
+                document.getElementById("statusMessage").textContent = "Error: " + error;
+            });
+        });
     </script>
 </body>
 </html>

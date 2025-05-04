@@ -23,9 +23,9 @@ from segmentation_model_loader import MaskformerSegmenter
 
 
 class MyServer:
-    def __init__(self):
+    def __init__(self, yaml_file_path='../Yaml-files/realsense.yaml', server_address='10.195.4.252', server_port=5003):
         # Set up the XML-RPC server
-        self.server = xmlrpc.server.SimpleXMLRPCServer(('10.195.4.252', 5003))
+        self.server = xmlrpc.server.SimpleXMLRPCServer((server_address, server_port))
         self.server.register_introspection_functions()
         self.server.register_function(self.start_mapping)
         self.server.register_function(self.stop_mapping)
@@ -46,8 +46,9 @@ class MyServer:
         self.vbg_access_lock = threading.Lock()  
         self.queue_empty = threading.Condition()
 
-        # Dataset parameters
-
+        # Store the yaml file path
+        self.yaml_file_path = yaml_file_path
+        
         # Initialize queue and indices
         self.index_queue = 0
         self.index_reconstruction = 0
@@ -55,7 +56,6 @@ class MyServer:
         self.onnx = True
         self.ort_session = None
         self.load_config()
-        
 
 
 
@@ -99,25 +99,8 @@ class MyServer:
             return f"Error deleting model '{name}': {e}"
 
     def load_config(self):
-        # Read configuration values from the YAML file
-        # config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-        
-        # with open(config_path, 'r') as config_file:
-        #     config = yaml.safe_load(config_file)
-
-        # Store values from the config into instance variables
-        # self.voxel_size = config.get('voxel_size', 0.025)
-        # self.trunc = self.voxel_size * config.get('truncation_vsize_multiple', 8)
-        # self.res = config.get('res', 8)
-        # self.n_labels = config.get('n_labels', 150)
-        # self.depth_scale = config.get('depth_scale', 1000.0)
-        # self.depth_max = config.get('depth_max', 5.0)
-        # self.miu = config.get('miu', 0.001)
-
-        yaml_file_path = '../Yaml-files/realsense.yaml'
-
         # Read the camera YAML file
-        with open(yaml_file_path, 'r') as file:
+        with open(self.yaml_file_path, 'r') as file:
             config = yaml.safe_load(file)
 
         # Extract the camera parameters
@@ -128,15 +111,14 @@ class MyServer:
         cy = config['Camera']['cy']
 
         self.K = np.array([[fx, 0, cx],
-              [0, fy, cy],
-              [0, 0, 1]], dtype=np.float64)
+            [0, fy, cy],
+            [0, 0, 1]], dtype=np.float64)
         self.frame_width = config["Camera"]["cols"]
         self.frame_height = config["Camera"]["rows"]
         self.ip_address = config["SocketPublisher"]["address"]
         self.port = config["SocketPublisher"]["port"]
 
-
-        # get mappnig params
+        # get mapping params
         self.voxel_size = config["Mapping"]["voxel_size"]
         self.trunc = self.voxel_size * config["Mapping"]["truncation_vsize_multiple"]
         self.res = config["Mapping"]["res"]
@@ -549,5 +531,17 @@ class MyServer:
         self.server.serve_forever()
 
 if __name__ == '__main__':
-    server = MyServer()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Start the mapping server')
+    parser.add_argument('--yaml', type=str, default='../Yaml-files/realsense.yaml',
+                        help='Path to the YAML configuration file')
+    parser.add_argument('--address', type=str, default='10.195.4.252',
+                        help='Server address to bind to')
+    parser.add_argument('--port', type=int, default=5003,
+                        help='Server port to bind to')
+    
+    args = parser.parse_args()
+    
+    server = MyServer(yaml_file_path=args.yaml, server_address=args.address, server_port=args.port)
     server.serve_forever()
