@@ -359,8 +359,10 @@ class MyServer:
                         depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                         print(depth_frame.shape)
                         print(depth_frame[:,0:20])
-                        if depth_frame.dtype != np.float32:
-                            depth_frame = depth_frame.astype(np.float32) / 1000.0 
+                        # if depth_frame.dtype != np.float32:
+                        #     depth_frame = depth_frame.astype(np.float32) / 1000.0 
+                        # depth_frame = cv2.imdecode(np.frombuffer(depth_image_data, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                        depth_frame = depth_frame.astype(np.float32)
 
                         # depth_o3d = o3d.geometry.Image(depth_frame)
                         # color_o3d = o3d.geometry.Image(cv2.cvtColor(color_frame, cv2.COLOR_BGR2RGB))

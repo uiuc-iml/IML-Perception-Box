@@ -31,3 +31,66 @@
 2025-05-03 19:33:40,955 - perception_config - INFO - Kimera-VIO started with dataset path: /home/motion/Euroc/V1_01_easy/
 2025-05-03 19:33:40,956 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:33:40] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
 2025-05-03 19:33:40,958 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:33:40] "GET / HTTP/1.1" 200 -
+2025-05-03 19:36:26,499 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:36:26,500 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:36:26] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:36:26,502 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:36:26] "GET / HTTP/1.1" 200 -
+2025-05-03 19:36:59,354 - perception_config - INFO - Stella-VSLAM started with realsense.yaml
+2025-05-03 19:36:59,355 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:36:59] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:36:59,356 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:36:59] "GET / HTTP/1.1" 200 -
+2025-05-03 19:37:31,941 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:37:31,942 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:37:31] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:37:31,943 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:37:31] "GET / HTTP/1.1" 200 -
+2025-05-03 19:37:45,765 - perception_config - INFO - Stella-VSLAM started with realsense.yaml
+2025-05-03 19:37:45,765 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:37:45] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:37:45,767 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:37:45] "GET / HTTP/1.1" 200 -
+2025-05-03 19:43:59,829 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:43:59,830 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:43:59] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:43:59,833 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:43:59] "GET / HTTP/1.1" 200 -
+2025-05-03 19:44:42,564 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:44:42,565 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:44:42] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:44:42,571 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:44:42] "GET / HTTP/1.1" 200 -
+2025-05-03 19:44:53,302 - perception_config - INFO - Stella-VSLAM started with realsense.yaml
+2025-05-03 19:44:53,303 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:44:53] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:44:53,306 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:44:53] "GET / HTTP/1.1" 200 -
+2025-05-03 19:45:56,442 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:45:56,444 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:45:56] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:45:56,448 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:45:56] "GET / HTTP/1.1" 200 -
+2025-05-03 19:46:14,470 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:46:14,471 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:46:14] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:46:14,474 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:46:14] "GET / HTTP/1.1" 200 -
+2025-05-03 19:46:28,141 - perception_config - INFO - Stella-VSLAM started with realsense.yaml
+2025-05-03 19:46:28,143 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:46:28] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:46:28,146 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:46:28] "GET / HTTP/1.1" 200 -
+2025-05-03 19:51:25,504 - perception_config - INFO - Mapping server started with realsense.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:51:25,505 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:51:25] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:51:25,509 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:51:25] "GET / HTTP/1.1" 200 -
+2025-05-03 19:51:40,451 - perception_config - INFO - Stella-VSLAM started with realsense.yaml
+2025-05-03 19:51:40,453 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:51:40] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:51:40,456 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:51:40] "GET / HTTP/1.1" 200 -
+2025-05-03 19:56:02,092 - perception_config - INFO - Mapping server started with zed.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:56:02,093 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:56:02] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:56:02,097 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:56:02] "GET / HTTP/1.1" 200 -
+2025-05-03 19:56:12,353 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 19:56:12,354 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:56:12] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:56:12,357 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:56:12] "GET / HTTP/1.1" 200 -
+2025-05-03 19:57:00,737 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 19:57:00,738 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:57:00] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:57:00,741 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:57:00] "GET / HTTP/1.1" 200 -
+2025-05-03 19:59:47,750 - perception_config - INFO - Mapping server started with zed.yaml, address=10.195.4.252, port=5003
+2025-05-03 19:59:47,751 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:59:47] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 19:59:47,754 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:59:47] "GET / HTTP/1.1" 200 -
+2025-05-03 19:59:56,628 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 19:59:56,629 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:59:56] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 19:59:56,632 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 19:59:56] "GET / HTTP/1.1" 200 -
+2025-05-03 20:00:00,678 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 20:00:00,679 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:00:00] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 20:00:00,683 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:00:00] "GET / HTTP/1.1" 200 -
+2025-05-03 20:01:31,591 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 20:01:31,592 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:01:31] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 20:01:31,594 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:01:31] "GET / HTTP/1.1" 200 -
+2025-05-03 20:02:16,719 - perception_config - INFO - Mapping server started with zed.yaml, address=10.195.4.252, port=5003
+2025-05-03 20:02:16,720 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:02:16] "[32mPOST /run_mapping_server HTTP/1.1[0m" 302 -
+2025-05-03 20:02:16,724 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:02:16] "GET / HTTP/1.1" 200 -
+2025-05-03 20:02:29,659 - perception_config - INFO - Stella-VSLAM started with zed.yaml
+2025-05-03 20:02:29,661 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:02:29] "[32mPOST /run_slam HTTP/1.1[0m" 302 -
+2025-05-03 20:02:29,664 - werkzeug - INFO - 10.195.4.252 - - [03/May/2025 20:02:29] "GET / HTTP/1.1" 200 -
