@@ -179,7 +179,7 @@ class MyServer:
                 voxel_size=self.voxel_size,
                 n_labels=num_labels,
                 integrate_color=color,
-                init_blocks=self.init_blocks
+                init_blocks=self.init_blocks,
                 live_stream=live_stream
 
             )

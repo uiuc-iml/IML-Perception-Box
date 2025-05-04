@@ -6,18 +6,18 @@ from perception_box import PerceptionBox
 
 
 def main():
-   box = PerceptionBox("http://10.192.251.78:5003")
-   # box.load_segmentation_model(name = "finetuned_segformer", onnx_file_path= "onnx_model_transfer/segformer/fine_tuned_segformer.onnx")
+   box = PerceptionBox("http://10.195.4.252:5003")
+   # box.send_segmentation_model(name = "finetuned_segformer", onnx_file_path= "onnx_model_transfer/segformer/fine_tuned_segformer.onnx")
    print(box.start_mapping(integrate_semantics=False, color = True, live_stream=True))
-   box.start_live_streaming_diff()
-
+   box.start_live_streaming()
+ 
    while True:
     key = input("q to stop mapping")
     if key:
         if key.lower() == 'q':
             print("User chose to quit.")
             break
-   box.stop_live_streaming_diff()
+   box.stop_live_streaming()
    
    time_begin = time.time()
    map_data = box.get_metric_map()

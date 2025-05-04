@@ -4,6 +4,7 @@ import open3d as o3d
 import cv2
 import threading
 import time
+import torch
 
 class PerceptionBox:
     def __init__(self, address):
@@ -41,10 +42,23 @@ class PerceptionBox:
     def get_map_stop_mapping(self):
         return self.server.get_map_stop_mapping()
 
-    def load_segmentation_model(self, name, onnx_file_path):
+    def send_segmentation_model(self, name, onnx_file_path):
         with open(onnx_file_path, "rb") as f:
             model_binary = xmlrpc.client.Binary(f.read())
         return self.server.load_segmentation_model(name, model_binary)
+
+    def exportmodel_torch_to_onnx(self, model, name, camera_frames_input_size):
+        rgb_tensor = torch.randn(1, 3, camera_frames_input_size[0], camera_frames_input_size[1])
+        depth_tensor = torch.randn(1, 1, camera_frames_input_size[0], camera_frames_input_size[1])
+        torch.onnx.export(
+        model,
+        (rgb_tensor, depth_tensor),
+        f"{name}.onnx",
+        input_names=["rgb", "depth"],
+        output_names=["segmentation"],
+        opset_version=12)
+        self.send_segmentation_model(name, f"name.onnx")  
+
 
     def list_onnx_models(self):
         return self.server.list_onnx_models()
@@ -131,7 +145,7 @@ class PerceptionBox:
             self._visualizer_thread.join()
             self._live_streaming_thread = None
 
-    def start_live_streaming_diff(self, refresh_rate=1):
+    def start_live_streaming_diff(self, refresh_rate=0.3):
         if self._live_streaming_diff_thread is not None and self._live_streaming_diff_thread.is_alive():
             print("Live diff streaming is already running.")
             return
@@ -155,7 +169,8 @@ class PerceptionBox:
                     diff = self.get_metric_map_diff_blocks()
                     points = np.array(diff['points'])
                     colors = np.array(diff['colors']) if diff['colors'] is not None else None
-
+                    print(points.shape, colors)
+                    # print(colors)
                     if len(points) > 0:
                         add_diff(points, colors)
                 except Exception as e:
@@ -167,19 +182,29 @@ class PerceptionBox:
             vis = o3d.visualization.Visualizer()
             vis.create_window(window_name='PerceptionBox Live Map (Diff)', width=960, height=720)
             pcd = o3d.geometry.PointCloud()
-            vis.add_geometry(pcd)
+            # vis.add_geometry(pcd)
+            added = False
             while not self._stop_live_streaming_diff.is_set():
                 if self._merged_pts:
                     merged_pts = np.concatenate(self._merged_pts, axis=0)
                     # pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(merged_pts)
-
+                    print(merged_pts.shape)
                     if self._merged_cols:
                         merged_cols = np.concatenate(self._merged_cols, axis=0)
                         pcd.colors = o3d.utility.Vector3dVector(merged_cols)
 
                     # vis.clear_geometries()
-                    vis.update_geometry(pcd)
+                    # vis.add_geometry(pcd)
+                    # vis.update_geometry(pcd)
+                    # vis.reset_view_point(True)
+                    if not added:
+                        vis.add_geometry(pcd)
+                        added = True
+                    else:
+                        vis.update_geometry(pcd)
+
+
 
                 vis.poll_events()
                 vis.update_renderer()
