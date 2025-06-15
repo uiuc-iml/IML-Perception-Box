@@ -1,4 +1,7 @@
 # Perception Box
+## Perception Box Overview
+
+The Perception Box is an integrated SLAM and 3D semantic mapping system designed for real-time spatial understanding. It combines visual-inertial SLAM with semantic and metric reconstruction to generate labeled 3D maps of the environment. The system supports live operation over XML-RPC, enabling control and data retrieval from networked clients.
 
 ## Table of Contents
 
